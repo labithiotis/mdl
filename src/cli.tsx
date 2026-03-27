@@ -1,0 +1,26 @@
+import path from 'node:path';
+import { render } from 'ink';
+import { parseCliArgs } from './lib/args';
+import { ensureFfmpegExecutable } from './lib/ffmpeg';
+import { loadManifest } from './lib/manifest';
+import { App } from './ui/app';
+
+await ensureFfmpegExecutable();
+
+const args = parseCliArgs(process.argv.slice(2));
+const dir = path.resolve(
+  process.env.INIT_CWD ?? process.env.PWD ?? process.cwd()
+);
+const manifest = !args.url ? await loadManifest(dir) : null;
+const outputDir = path.resolve(args.outputDir ?? dir);
+
+render(
+  <App
+    manifest={manifest}
+    initialUrl={args.url}
+    outputDir={outputDir}
+    audioFormat={args.audioFormat}
+    audioQuality={args.audioQuality}
+    downloadParallelism={args.downloadParallelism}
+  />
+);
