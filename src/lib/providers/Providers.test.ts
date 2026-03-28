@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { detectProvider, validateProviderUrl } from './Providers';
 
 describe('providers', () => {
-  test('detects direct playlist, album, and Spotify track URLs for every recognized provider', () => {
+  test('detects direct playlist, album, and track URLs for every recognized provider', () => {
     expect(
       detectProvider('https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2')
     ).toBe('spotify');
@@ -24,12 +24,22 @@ describe('providers', () => {
     ).toBe('apple-music');
     expect(
       detectProvider(
+        'https://music.apple.com/us/album/days-we-left-behind/1887402919?i=1887403088'
+      )
+    ).toBe('apple-music');
+    expect(
+      detectProvider(
         'https://music.amazon.com/playlists/B01M11SBC8?marketplaceId=ATVPDKIKX0DER&musicTerritory=US'
       )
     ).toBe('amazon-music');
     expect(detectProvider('https://music.amazon.com/albums/B09DS56JYZ')).toBe(
       'amazon-music'
     );
+    expect(
+      detectProvider(
+        'https://music.amazon.com/albums/B0FQCR86CK?do=play&trackAsin=B0FQDGK37H'
+      )
+    ).toBe('amazon-music');
     expect(
       detectProvider(
         'https://music.youtube.com/playlist?list=OLAK5uy_kL1MLS8vRizOS0jZ7MaqNVkcZ6LL3Us8Q'
@@ -40,9 +50,17 @@ describe('providers', () => {
     ).toBe('youtube-music');
     expect(
       detectProvider(
+        'https://music.youtube.com/watch?v=hLQl3WQQoQ0&list=RDCLAK5uy_nHSqCJjDrW9HBhCNdF6tWPdnOMngOv0wA'
+      )
+    ).toBe('youtube-music');
+    expect(
+      detectProvider(
         'https://m.soundcloud.com/user-420319049/sets/sets-on-sets'
       )
     ).toBe('soundcloud');
+    expect(detectProvider('https://soundcloud.com/lovebunii/virgilio')).toBe(
+      'soundcloud'
+    );
     expect(
       detectProvider('https://bandcamp.com/folkmylife_blog/playlist/folkmylife')
     ).toBe('bandcamp');
@@ -50,6 +68,9 @@ describe('providers', () => {
       detectProvider(
         'https://marcellaandherlovers.bandcamp.com/album/live-from-memphis'
       )
+    ).toBe('bandcamp');
+    expect(
+      detectProvider('https://munterfel.bandcamp.com/track/dancinginjuly')
     ).toBe('bandcamp');
     expect(
       detectProvider(
@@ -66,10 +87,16 @@ describe('providers', () => {
         'https://www.qobuz.com/us-en/album/discovery-daft-punk/0724384960650'
       )
     ).toBe('qobuz');
+    expect(detectProvider('https://open.qobuz.com/track/13176083')).toBe(
+      'qobuz'
+    );
     expect(
       detectProvider('https://www.deezer.com/us/playlist/1234567890')
     ).toBe('deezer');
     expect(detectProvider('https://www.deezer.com/us/album/302127')).toBe(
+      'deezer'
+    );
+    expect(detectProvider('https://www.deezer.com/track/3703817902')).toBe(
       'deezer'
     );
     expect(
@@ -78,6 +105,9 @@ describe('providers', () => {
       )
     ).toBe('tidal');
     expect(detectProvider('https://tidal.com/album/102948177')).toBe('tidal');
+    expect(detectProvider('https://tidal.com/browse/track/495402660')).toBe(
+      'tidal'
+    );
   });
 
   test('rejects malformed URLs and non-provider URLs', async () => {
@@ -91,13 +121,13 @@ describe('providers', () => {
       validateProviderUrl('https://music.apple.com/us/music-video/example/123')
     ).rejects.toThrow(/Unsupported music URL/);
     expect(
-      validateProviderUrl('https://music.youtube.com/watch?v=dQw4w9WgXcQ')
+      validateProviderUrl('https://music.youtube.com/watch?v=')
     ).rejects.toThrow(/Unsupported music URL/);
     expect(
-      validateProviderUrl('https://soundcloud.com/artist/track-name')
+      validateProviderUrl('https://soundcloud.com/discover')
     ).rejects.toThrow(/Unsupported music URL/);
     expect(
-      validateProviderUrl('https://bandcamp.com/artist/track/example')
+      validateProviderUrl('https://bandcamp.com/tag/ambient')
     ).rejects.toThrow(/Unsupported music URL/);
   });
 
@@ -120,6 +150,28 @@ describe('providers', () => {
     expect(result.provider).toBe('youtube-music');
     expect(result.normalizedUrl).toBe(
       'https://music.youtube.com/playlist?list=RDCLAK5uy_nHSqCJjDrW9HBhCNdF6tWPdnOMngOv0wA'
+    );
+  });
+
+  test('preserves track identity while normalizing direct track URLs', async () => {
+    const appleMusic = await validateProviderUrl(
+      'https://music.apple.com/us/album/days-we-left-behind/1887402919?i=1887403088'
+    );
+    const amazonMusic = await validateProviderUrl(
+      'https://music.amazon.com/albums/B0FQCR86CK?do=play&trackAsin=B0FQDGK37H'
+    );
+    const youTubeMusic = await validateProviderUrl(
+      'https://music.youtube.com/watch?v=hLQl3WQQoQ0&list=RDCLAK5uy_nHSqCJjDrW9HBhCNdF6tWPdnOMngOv0wA&si=test'
+    );
+
+    expect(appleMusic.normalizedUrl).toBe(
+      'https://music.apple.com/us/album/days-we-left-behind/1887402919?i=1887403088'
+    );
+    expect(amazonMusic.normalizedUrl).toBe(
+      'https://music.amazon.com/albums/B0FQCR86CK?trackAsin=B0FQDGK37H'
+    );
+    expect(youTubeMusic.normalizedUrl).toBe(
+      'https://music.youtube.com/watch?v=hLQl3WQQoQ0&list=RDCLAK5uy_nHSqCJjDrW9HBhCNdF6tWPdnOMngOv0wA'
     );
   });
 

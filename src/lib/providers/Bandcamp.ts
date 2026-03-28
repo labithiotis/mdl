@@ -16,6 +16,7 @@ export class BandcampProvider implements ProviderOptions {
         hostname.endsWith('.bandcamp.com')) &&
         [
           /^\/album\/[^/]+(?:\/)?$/i,
+          /^\/track\/[^/]+(?:\/)?$/i,
           /^\/[^/]+\/album\/[^/]+(?:\/)?$/i,
           /^\/[^/]+\/playlist\/[^/]+(?:\/)?$/i,
         ].some((pattern) => pattern.test(pathname))) ||
@@ -46,6 +47,10 @@ export class BandcampProvider implements ProviderOptions {
   public parsePlaylistHtml(html: string, sourceUrl: string): PlaylistMetadata {
     if (sourceUrl.includes('://daily.bandcamp.com/')) {
       return this.parseDailyHtml(html, sourceUrl);
+    }
+
+    if (sourceUrl.includes('/track/')) {
+      return this.parseTrackHtml(html, sourceUrl);
     }
 
     if (sourceUrl.includes('/album/')) {
@@ -143,6 +148,50 @@ export class BandcampProvider implements ProviderOptions {
     };
   }
 
+  public parseTrackHtml(html: string, sourceUrl: string): PlaylistMetadata {
+    const track = this.extractTrackSchema(html);
+    const trackId =
+      this.extractSchemaPropertyValue(track.additionalProperty, 'track_id') ||
+      this.extractSchemaPropertyValue(
+        track.inAlbum?.albumRelease?.[0]?.additionalProperty,
+        'item_id'
+      );
+    const title = track.name?.trim();
+    const artist =
+      track.byArtist?.name?.trim() ||
+      track.publisher?.name?.trim() ||
+      undefined;
+    const artworkUrl = getFirstNonEmptyString(
+      Array.isArray(track.image) ? track.image[0] : track.image,
+      track.inAlbum?.albumRelease?.[0]?.image?.[0]
+    );
+
+    if (!trackId || !title || !artist) {
+      throw new Error('Could not find Bandcamp track metadata in the page.');
+    }
+
+    const normalizedTrack: PlaylistTrack = {
+      id: trackId,
+      title,
+      artists: [artist],
+      album: track.inAlbum?.name?.trim() || undefined,
+      artworkUrl,
+      durationMs: this.parseIsoDurationMs(track.duration),
+      sourceUrl:
+        track.mainEntityOfPage?.trim() || track['@id']?.trim() || sourceUrl,
+    };
+
+    return {
+      id: normalizedTrack.id,
+      title: normalizedTrack.title,
+      owner: artist,
+      artworkUrl: normalizedTrack.artworkUrl,
+      provider: 'bandcamp',
+      sourceUrl: normalizedTrack.sourceUrl || sourceUrl,
+      tracks: [normalizedTrack],
+    };
+  }
+
   private extractPayload(html: string): BandcampPlaylistBlob {
     const match = html.match(/data-blob="([^"]*appData[^"]*)"/);
 
@@ -196,6 +245,23 @@ export class BandcampProvider implements ProviderOptions {
     }
 
     return schema as BandcampAlbumSchema;
+  }
+
+  private extractTrackSchema(html: string): BandcampTrackSchema {
+    const matches = Array.from(
+      html.matchAll(
+        /<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g
+      )
+    );
+    const schema = matches
+      .map((match) => JSON.parse(match[1]) as Record<string, unknown>)
+      .find((entry) => entry['@type'] === 'MusicRecording');
+
+    if (!schema) {
+      throw new Error('Could not find Bandcamp track data in the page.');
+    }
+
+    return schema as BandcampTrackSchema;
   }
 
   private normalizeDailyTrack(
@@ -431,5 +497,33 @@ type BandcampAlbumSchema = {
         name?: string;
       };
     }>;
+  };
+};
+
+type BandcampTrackSchema = {
+  '@id'?: string;
+  additionalProperty?: Array<{
+    name?: string;
+    value?: number | string;
+  }>;
+  byArtist?: {
+    name?: string;
+  };
+  duration?: string;
+  image?: string | string[];
+  inAlbum?: {
+    albumRelease?: Array<{
+      additionalProperty?: Array<{
+        name?: string;
+        value?: number | string;
+      }>;
+      image?: string[];
+    }>;
+    name?: string;
+  };
+  mainEntityOfPage?: string;
+  name?: string;
+  publisher?: {
+    name?: string;
   };
 };

@@ -23,6 +23,7 @@ export class QobuzProvider implements ProviderOptions {
       [
         /^\/album\/[A-Za-z0-9]+(?:\/)?$/i,
         /^\/playlist\/[A-Za-z0-9]+(?:\/)?$/i,
+        /^\/track\/[A-Za-z0-9]+(?:\/)?$/i,
         /^\/[a-z]{2}-[a-z]{2}\/album\/[^/]+\/[A-Za-z0-9]+(?:\/)?$/i,
         /^\/[a-z]{2}-[a-z]{2}\/playlists\/[^/]+\/[A-Za-z0-9]+(?:\/)?$/i,
       ].some((pattern) => pattern.test(pathname))
@@ -37,6 +38,9 @@ export class QobuzProvider implements ProviderOptions {
     const collectionKind = this.getCollectionKind(url);
     const collectionId = this.extractCollectionId(url);
     const appId = await this.resolveAppId(signal);
+    if (collectionKind === 'track') {
+      return this.fetchTrack(url, collectionId, appId, signal);
+    }
     const payload =
       collectionKind === 'album'
         ? await this.fetchAlbumPayload(collectionId, appId, signal)
@@ -68,6 +72,30 @@ export class QobuzProvider implements ProviderOptions {
       provider: 'qobuz',
       sourceUrl: payload.url?.trim() || url,
       tracks,
+    };
+  }
+
+  private async fetchTrack(
+    sourceUrl: string,
+    trackId: string,
+    appId: string,
+    signal?: AbortSignal
+  ): Promise<PlaylistMetadata> {
+    const payload = await this.fetchTrackPayload(trackId, appId, signal);
+    const track = this.normalizeTrack(payload);
+
+    if (!track) {
+      throw new Error('No track was found in the Qobuz response.');
+    }
+
+    return {
+      id: track.id,
+      title: track.title,
+      owner: track.artists[0],
+      artworkUrl: track.artworkUrl,
+      provider: 'qobuz',
+      sourceUrl: track.sourceUrl || sourceUrl,
+      tracks: [track],
     };
   }
 
@@ -146,6 +174,29 @@ export class QobuzProvider implements ProviderOptions {
     return (await response.json()) as QobuzPlaylistResponse;
   }
 
+  private async fetchTrackPayload(
+    trackId: string,
+    appId: string,
+    signal?: AbortSignal
+  ): Promise<QobuzTrackItem> {
+    const url = new URL('https://www.qobuz.com/api.json/0.2/track/get');
+    url.searchParams.set('track_id', trackId);
+    url.searchParams.set('app_id', appId);
+
+    const response = await fetch(url, {
+      headers: {
+        'user-agent': 'Mozilla/5.0',
+      },
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Qobuz request failed with status ${response.status}.`);
+    }
+
+    return (await response.json()) as QobuzTrackItem;
+  }
+
   private async resolveAppId(signal?: AbortSignal): Promise<string> {
     if (this.cachedAppId) {
       return this.cachedAppId;
@@ -180,7 +231,7 @@ export class QobuzProvider implements ProviderOptions {
   private extractCollectionId(sourceUrl: string): string {
     const parsedUrl = new URL(sourceUrl);
     const match = parsedUrl.pathname.match(
-      /\/(?:album|playlist|[a-z]{2}-[a-z]{2}\/album\/[^/]+|[a-z]{2}-[a-z]{2}\/playlists\/[^/]+)\/([A-Za-z0-9]+)\/?$/i
+      /\/(?:track|album|playlist|[a-z]{2}-[a-z]{2}\/album\/[^/]+|[a-z]{2}-[a-z]{2}\/playlists\/[^/]+)\/([A-Za-z0-9]+)\/?$/i
     );
 
     if (!match?.[1]) {
@@ -192,10 +243,18 @@ export class QobuzProvider implements ProviderOptions {
     return match[1];
   }
 
-  private getCollectionKind(sourceUrl: string): 'album' | 'playlist' {
-    return new URL(sourceUrl).pathname.includes('/album/')
-      ? 'album'
-      : 'playlist';
+  private getCollectionKind(sourceUrl: string): 'album' | 'playlist' | 'track' {
+    const pathname = new URL(sourceUrl).pathname;
+
+    if (pathname.includes('/album/')) {
+      return 'album';
+    }
+
+    if (pathname.includes('/track/')) {
+      return 'track';
+    }
+
+    return 'playlist';
   }
 }
 

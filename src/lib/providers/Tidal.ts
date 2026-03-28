@@ -16,8 +16,10 @@ export class TidalProvider implements ProviderOptions {
       [
         /^\/browse\/album\/\d+(?:\/)?$/i,
         /^\/browse\/playlist\/[0-9a-f-]+(?:\/)?$/i,
+        /^\/browse\/track\/\d+(?:\/)?$/i,
         /^\/album\/\d+(?:\/)?$/i,
         /^\/playlist\/[0-9a-f-]+(?:\/)?$/i,
+        /^\/track\/\d+(?:\/)?$/i,
       ].some((pattern) => pattern.test(pathname))
     );
   }
@@ -28,6 +30,10 @@ export class TidalProvider implements ProviderOptions {
   ): Promise<PlaylistMetadata> {
     const { signal } = options;
     const collectionKind = this.getCollectionKind(url);
+
+    if (collectionKind === 'track') {
+      return this.fetchTrack(url, signal);
+    }
 
     if (collectionKind === 'album') {
       return this.fetchAlbum(url, signal);
@@ -57,6 +63,35 @@ export class TidalProvider implements ProviderOptions {
       provider: 'tidal',
       sourceUrl: metadata.sourceUrl,
       tracks,
+    };
+  }
+
+  private async fetchTrack(
+    sourceUrl: string,
+    signal?: AbortSignal
+  ): Promise<PlaylistMetadata> {
+    const trackId = Number.parseInt(this.extractCollectionId(sourceUrl), 10);
+    const payload = await this.fetchTrackData(trackId, signal);
+    const track = payload.data?.track;
+
+    if (!track) {
+      throw new Error('Could not find Tidal track metadata in the response.');
+    }
+
+    const normalizedTrack = this.normalizeTrack(track);
+
+    if (!normalizedTrack) {
+      throw new Error('Could not find Tidal track metadata in the response.');
+    }
+
+    return {
+      id: normalizedTrack.id,
+      title: normalizedTrack.title,
+      owner: normalizedTrack.artists[0],
+      artworkUrl: normalizedTrack.artworkUrl,
+      provider: 'tidal',
+      sourceUrl: normalizedTrack.sourceUrl || sourceUrl,
+      tracks: [normalizedTrack],
     };
   }
 
@@ -242,6 +277,53 @@ export class TidalProvider implements ProviderOptions {
     return payload;
   }
 
+  private async fetchTrackData(
+    trackId: number,
+    signal?: AbortSignal
+  ): Promise<TidalTrackResponse> {
+    const response = await fetch(TIDAL_GRAPHQL_URL, {
+      body: JSON.stringify({
+        query: `
+        query ($trackId: BigInt!) {
+          track(id: $trackId) {
+            album { title image { original large medium small xsmall } }
+            artists { name }
+            duration
+            id
+            image { original large medium small xsmall }
+            title
+          }
+        }
+      `,
+        variables: {
+          trackId,
+        },
+      }),
+      headers: {
+        'content-type': 'application/json',
+      },
+      method: 'POST',
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Tidal track request failed with status ${response.status}.`
+      );
+    }
+
+    const payload = (await response.json()) as TidalTrackResponse;
+    const errorMessage = payload.errors?.find(
+      (error) => error.message
+    )?.message;
+
+    if (errorMessage) {
+      throw new Error(`Tidal track request failed: ${errorMessage}`);
+    }
+
+    return payload;
+  }
+
   private normalizeTrack(
     track: TidalTrackItem,
     collectionArtworkUrl?: string
@@ -324,7 +406,7 @@ export class TidalProvider implements ProviderOptions {
   private extractCollectionId(sourceUrl: string): string {
     const parsedUrl = new URL(sourceUrl);
     const match = parsedUrl.pathname.match(
-      /\/(?:album|playlist)\/([0-9a-z-]+)/i
+      /\/(?:album|playlist|track)\/([0-9a-z-]+)/i
     );
 
     if (!match?.[1]) {
@@ -336,10 +418,18 @@ export class TidalProvider implements ProviderOptions {
     return match[1];
   }
 
-  private getCollectionKind(sourceUrl: string): 'album' | 'playlist' {
-    return new URL(sourceUrl).pathname.includes('/album/')
-      ? 'album'
-      : 'playlist';
+  private getCollectionKind(sourceUrl: string): 'album' | 'playlist' | 'track' {
+    const pathname = new URL(sourceUrl).pathname;
+
+    if (pathname.includes('/album/')) {
+      return 'album';
+    }
+
+    if (pathname.includes('/track/')) {
+      return 'track';
+    }
+
+    return 'playlist';
   }
 
   private escapeRegExp(value: string): string {
@@ -394,6 +484,15 @@ type TidalAlbumResponse = {
       title?: string;
       tracks?: TidalTrackItem[];
     } | null;
+  };
+  errors?: Array<{
+    message?: string;
+  }>;
+};
+
+type TidalTrackResponse = {
+  data?: {
+    track?: TidalTrackItem | null;
   };
   errors?: Array<{
     message?: string;

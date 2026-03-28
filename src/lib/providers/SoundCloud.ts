@@ -10,6 +10,7 @@ export class SoundCloudProvider implements ProviderOptions {
 
   public matchesUrl(url: URL): boolean {
     const pathname = url.pathname.replace(/\/+$/, '') || '/';
+    const segments = pathname.split('/').filter(Boolean);
 
     return (
       ['soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com'].includes(
@@ -18,7 +19,10 @@ export class SoundCloudProvider implements ProviderOptions {
       [
         /^\/[^/]+\/sets\/[^/]+(?:\/)?$/i,
         /^\/discover\/sets\/[^/]+(?:\/)?$/i,
-      ].some((pattern) => pattern.test(pathname))
+        /^\/[^/]+\/[^/]+(?:\/)?$/i,
+      ].some((pattern) => pattern.test(pathname)) &&
+      !(segments.length === 2 && segments[0] === 'discover') &&
+      !(segments.length === 2 && segments[1] === 'sets')
     );
   }
 
@@ -35,7 +39,9 @@ export class SoundCloudProvider implements ProviderOptions {
     }
 
     const html = await response.text();
-    return this.parsePlaylistHtml(html, url);
+    return this.isTrackUrl(url)
+      ? this.parseTrackHtml(html, url)
+      : this.parsePlaylistHtml(html, url);
   }
 
   public parsePlaylistHtml(html: string, sourceUrl: string): PlaylistMetadata {
@@ -68,6 +74,33 @@ export class SoundCloudProvider implements ProviderOptions {
       provider: 'soundcloud',
       sourceUrl: playlist.permalink_url?.trim() || sourceUrl,
       tracks,
+    });
+  }
+
+  public parseTrackHtml(html: string, sourceUrl: string): PlaylistMetadata {
+    const hydration = this.extractHydration(html);
+    const track = hydration.find((item) => item.hydratable === 'sound')?.data as
+      | SoundCloudTrack
+      | undefined;
+
+    if (!track?.id || !track.title) {
+      throw new Error('Could not find SoundCloud track metadata in the page.');
+    }
+
+    const normalizedTrack = this.normalizeTrack(track, 0, undefined);
+
+    if (!normalizedTrack) {
+      throw new Error('Could not normalize the SoundCloud track metadata.');
+    }
+
+    return decodeUnknownSync(playlistMetadataSchema, {
+      id: String(track.id),
+      title: normalizedTrack.title,
+      owner: normalizedTrack.artists[0],
+      artworkUrl: normalizedTrack.artworkUrl,
+      provider: 'soundcloud',
+      sourceUrl: normalizedTrack.sourceUrl || sourceUrl,
+      tracks: [normalizedTrack],
     });
   }
 
@@ -111,6 +144,10 @@ export class SoundCloudProvider implements ProviderOptions {
           : undefined,
       sourceUrl: track.permalink_url?.trim() || undefined,
     };
+  }
+
+  private isTrackUrl(sourceUrl: string): boolean {
+    return !new URL(sourceUrl).pathname.includes('/sets/');
   }
 }
 

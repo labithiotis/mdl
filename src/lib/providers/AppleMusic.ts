@@ -17,6 +17,7 @@ export class AppleMusicProvider implements ProviderOptions {
       [
         /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?album\/[^/]+\/\d+(?:\/)?$/i,
         /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?playlist\/[^/]+\/pl\.[A-Za-z0-9.]+(?:\/)?$/i,
+        /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?song\/[^/]+\/\d+(?:\/)?$/i,
       ].some((pattern) => pattern.test(pathname))
     );
   }
@@ -25,6 +26,7 @@ export class AppleMusicProvider implements ProviderOptions {
     url: string,
     _options: FetchOptions
   ): Promise<PlaylistMetadata> {
+    const trackId = this.extractTrackId(url);
     const response = await fetch(url, {
       headers: {
         'user-agent': 'Mozilla/5.0',
@@ -37,10 +39,18 @@ export class AppleMusicProvider implements ProviderOptions {
       );
     }
 
-    return this.parsePlaylistHtml(await response.text(), url);
+    return this.parsePlaylistHtml(
+      await response.text(),
+      url,
+      trackId ?? undefined
+    );
   }
 
-  public parsePlaylistHtml(html: string, sourceUrl: string): PlaylistMetadata {
+  public parsePlaylistHtml(
+    html: string,
+    sourceUrl: string,
+    trackId?: string
+  ): PlaylistMetadata {
     const serializedData = this.extractSerializedServerData(html);
     const playlistHeader = this.findPlaylistHeader(serializedData);
     const collectionArtworkUrl = this.normalizeArtworkUrl(
@@ -49,6 +59,9 @@ export class AppleMusicProvider implements ProviderOptions {
     const tracks = this.findTrackItems(serializedData).map((track) =>
       this.normalizeTrack(track, collectionArtworkUrl)
     );
+    const selectedTrack = trackId
+      ? tracks.find((track) => track.id === trackId)
+      : undefined;
 
     if (!playlistHeader) {
       throw new Error(
@@ -56,8 +69,20 @@ export class AppleMusicProvider implements ProviderOptions {
       );
     }
 
-    if (tracks.length === 0) {
+    if (tracks.length === 0 || (trackId && !selectedTrack)) {
       throw new Error('No tracks were found in the Apple Music collection.');
+    }
+
+    if (selectedTrack) {
+      return {
+        id: selectedTrack.id,
+        title: selectedTrack.title,
+        owner: selectedTrack.artists[0],
+        artworkUrl: selectedTrack.artworkUrl,
+        provider: 'apple-music',
+        sourceUrl: selectedTrack.sourceUrl || sourceUrl,
+        tracks: [selectedTrack],
+      };
     }
 
     const isAlbum = playlistHeader.contentDescriptor?.kind === 'album';
@@ -74,6 +99,18 @@ export class AppleMusicProvider implements ProviderOptions {
       sourceUrl: playlistHeader.contentDescriptor?.url?.trim() || sourceUrl,
       tracks,
     };
+  }
+
+  private extractTrackId(sourceUrl: string): string | null {
+    const parsedUrl = new URL(sourceUrl);
+    const trackId = parsedUrl.searchParams.get('i')?.trim();
+
+    if (trackId) {
+      return trackId;
+    }
+
+    const match = parsedUrl.pathname.match(/\/song\/[^/]+\/(\d+)(?:\/)?$/i);
+    return match?.[1] ?? null;
   }
 
   private extractSerializedServerData(html: string): AppleMusicSerializedData {

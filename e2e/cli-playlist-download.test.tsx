@@ -22,7 +22,7 @@ describe('cli-playlist-download', () => {
           audioFormat="mp3"
           audioQuality="best"
           downloadParallelism={5}
-          initialOutputDir={outputRoot}
+          outputDir={outputRoot}
         />
       );
 

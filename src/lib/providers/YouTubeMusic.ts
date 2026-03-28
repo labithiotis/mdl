@@ -18,6 +18,7 @@ export class YouTubeMusicProvider implements ProviderOptions {
       ) &&
       (([/^\/playlist$/i].some((pattern) => pattern.test(pathname)) &&
         Boolean(url.searchParams.get('list'))) ||
+        (/^\/watch$/i.test(pathname) && Boolean(url.searchParams.get('v'))) ||
         [
           /^\/browse\/(?:MPRE|FEmusic_library_privately_owned_release)[A-Za-z0-9_-]+$/i,
         ].some((pattern) => pattern.test(pathname)))
@@ -30,6 +31,7 @@ export class YouTubeMusicProvider implements ProviderOptions {
   ): Promise<PlaylistMetadata> {
     const client = await this.getClient();
     const albumId = this.extractAlbumId(url);
+    const videoId = this.extractVideoId(url);
 
     if (albumId) {
       const album = await client.music.getAlbum(albumId);
@@ -62,16 +64,12 @@ export class YouTubeMusicProvider implements ProviderOptions {
       });
     }
 
-    const playlistId = this.extractPlaylistId(url);
-    let page = await client.music.getPlaylist(playlistId);
-    const items = [...page.items];
-
-    while (page.has_continuation) {
-      page = await page.getContinuation();
-      items.push(...page.items);
+    if (videoId) {
+      return this.fetchTrack(client, url, videoId);
     }
 
-    const header = page.header as YTMusicHeader | undefined;
+    const playlistId = this.extractPlaylistId(url);
+    const { header, items } = await this.fetchPlaylistItems(client, playlistId);
     const tracks = items
       .map((item, index) =>
         this.normalizeTrack(
@@ -94,6 +92,77 @@ export class YouTubeMusicProvider implements ProviderOptions {
       provider: 'youtube-music',
       sourceUrl: url,
       tracks,
+    });
+  }
+
+  private async fetchTrack(
+    client: Innertube,
+    sourceUrl: string,
+    videoId: string
+  ): Promise<PlaylistMetadata> {
+    const playlistId = this.tryExtractPlaylistId(sourceUrl);
+
+    if (playlistId) {
+      const { header, items } = await this.fetchPlaylistItems(
+        client,
+        playlistId
+      );
+      const track = items
+        .map((item, index) =>
+          this.normalizeTrack(
+            item as YTMusicListItem,
+            index,
+            playlistId,
+            header?.thumbnail?.contents?.[0]?.url?.trim() || undefined
+          )
+        )
+        .find((candidate) => candidate?.id === videoId);
+
+      if (!track) {
+        throw new Error(
+          'Could not find the YouTube Music track in the playlist.'
+        );
+      }
+
+      return decodeUnknownSync(playlistMetadataSchema, {
+        id: track.id,
+        title: track.title,
+        owner: track.artists[0],
+        artworkUrl: track.artworkUrl,
+        provider: 'youtube-music',
+        sourceUrl: track.sourceUrl || sourceUrl,
+        tracks: [track],
+      });
+    }
+
+    const info = await client.music.getInfo(videoId);
+    const title = info.basic_info?.title?.trim();
+    const artist = info.basic_info?.author?.trim();
+
+    if (!title || !artist || !info.basic_info?.id) {
+      throw new Error('Could not find YouTube Music track metadata.');
+    }
+
+    const track: PlaylistTrack = {
+      id: info.basic_info.id,
+      title,
+      artists: [artist],
+      artworkUrl: info.basic_info.thumbnail?.[0]?.url?.trim() || undefined,
+      durationMs:
+        typeof info.basic_info.duration === 'number'
+          ? info.basic_info.duration * 1000
+          : undefined,
+      sourceUrl: info.basic_info.url_canonical?.trim() || sourceUrl,
+    };
+
+    return decodeUnknownSync(playlistMetadataSchema, {
+      id: track.id,
+      title: track.title,
+      owner: artist,
+      artworkUrl: track.artworkUrl,
+      provider: 'youtube-music',
+      sourceUrl: track.sourceUrl || sourceUrl,
+      tracks: [track],
     });
   }
 
@@ -144,7 +213,7 @@ export class YouTubeMusicProvider implements ProviderOptions {
   }
 
   private extractPlaylistId(sourceUrl: string): string {
-    const playlistId = new URL(sourceUrl).searchParams.get('list')?.trim();
+    const playlistId = this.tryExtractPlaylistId(sourceUrl);
 
     if (!playlistId) {
       throw new Error(
@@ -153,6 +222,19 @@ export class YouTubeMusicProvider implements ProviderOptions {
     }
 
     return playlistId;
+  }
+
+  private tryExtractPlaylistId(sourceUrl: string): string | null {
+    return new URL(sourceUrl).searchParams.get('list')?.trim() || null;
+  }
+
+  private extractVideoId(sourceUrl: string): string | null {
+    const parsedUrl = new URL(sourceUrl);
+    if (!/^\/watch$/i.test(parsedUrl.pathname)) {
+      return null;
+    }
+
+    return parsedUrl.searchParams.get('v')?.trim() || null;
   }
 
   private extractAlbumId(sourceUrl: string): string | null {
@@ -186,6 +268,24 @@ export class YouTubeMusicProvider implements ProviderOptions {
   private async getClient(): Promise<Innertube> {
     this.youtubeClientPromise ??= Innertube.create();
     return this.youtubeClientPromise;
+  }
+
+  private async fetchPlaylistItems(
+    client: Innertube,
+    playlistId: string
+  ): Promise<{ header: YTMusicHeader | undefined; items: unknown[] }> {
+    let page = await client.music.getPlaylist(playlistId);
+    const items = [...page.items];
+
+    while (page.has_continuation) {
+      page = await page.getContinuation();
+      items.push(...page.items);
+    }
+
+    return {
+      header: page.header as YTMusicHeader | undefined,
+      items,
+    };
   }
 }
 

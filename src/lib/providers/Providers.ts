@@ -185,18 +185,46 @@ function stripQueryAndHash(url: URL): string {
 }
 
 function normalizeProviderUrl(url: URL, provider: Provider): string {
+  if (provider === 'apple-music') {
+    return preserveQueryParameters(url, ['i']);
+  }
+
+  if (provider === 'amazon-music') {
+    return preserveQueryParameters(url, ['trackAsin']);
+  }
+
   if (provider !== 'youtube-music') {
     return stripQueryAndHash(url);
   }
 
   const normalized = new URL(url.toString());
   const listId = normalized.searchParams.get('list')?.trim();
+  const videoId = normalized.searchParams.get('v')?.trim();
+  normalized.search = '';
+  normalized.hash = '';
+
+  if (videoId) {
+    normalized.searchParams.set('v', videoId);
+  }
+
+  if (listId) {
+    normalized.searchParams.set('list', listId);
+  }
+
+  return normalized.toString();
+}
+
+function preserveQueryParameters(url: URL, parameterNames: string[]): string {
+  const normalized = new URL(url.toString());
+  const preservedEntries = parameterNames
+    .map((name) => [name, normalized.searchParams.get(name)?.trim()] as const)
+    .filter((entry): entry is readonly [string, string] => Boolean(entry[1]));
 
   normalized.search = '';
   normalized.hash = '';
 
-  if (listId) {
-    normalized.searchParams.set('list', listId);
+  for (const [name, value] of preservedEntries) {
+    normalized.searchParams.set(name, value);
   }
 
   return normalized.toString();

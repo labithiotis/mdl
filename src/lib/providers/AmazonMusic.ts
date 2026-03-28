@@ -30,6 +30,12 @@ export class AmazonMusicProvider implements ProviderOptions {
     options: FetchOptions
   ): Promise<PlaylistMetadata> {
     const { signal } = options;
+    const trackAsin = this.extractTrackAsin(url);
+
+    if (trackAsin) {
+      return this.fetchTrack(url, trackAsin, signal);
+    }
+
     const collectionKind = this.getCollectionKind(url);
     const html = await this.fetchHtml(url, signal);
     const playlist = this.parsePlaylistHtml(html);
@@ -95,6 +101,58 @@ export class AmazonMusicProvider implements ProviderOptions {
       provider: 'amazon-music',
       sourceUrl: url,
       tracks: normalizedTracks,
+    };
+  }
+
+  private async fetchTrack(
+    sourceUrl: string,
+    trackAsin: string,
+    signal?: AbortSignal
+  ): Promise<PlaylistMetadata> {
+    const trackHtml = await this.fetchHtml(
+      this.buildTrackPlaybackUrl(sourceUrl, trackAsin),
+      signal
+    );
+    const trackPage = this.parseTrackHtml(trackHtml);
+    const artist = trackPage.artistUrl
+      ? await this.getCachedName(
+          this.artistNameCache,
+          trackPage.artistUrl,
+          signal
+        )
+      : undefined;
+    const albumTitle = trackPage.albumUrl
+      ? await this.getCachedName(
+          this.albumTitleCache,
+          trackPage.albumUrl,
+          signal
+        )
+      : undefined;
+
+    if (!trackPage.title || !artist) {
+      throw new Error(
+        'Could not find Amazon Music track metadata in the page.'
+      );
+    }
+
+    const track: PlaylistTrack = {
+      id: trackAsin,
+      title: trackPage.title,
+      artists: [artist],
+      album: albumTitle,
+      artworkUrl: trackPage.artworkUrl,
+      durationMs: trackPage.durationMs,
+      sourceUrl: trackPage.sourceUrl,
+    };
+
+    return {
+      id: track.id,
+      title: track.title,
+      owner: artist,
+      artworkUrl: track.artworkUrl,
+      provider: 'amazon-music',
+      sourceUrl: track.sourceUrl || sourceUrl,
+      tracks: [track],
     };
   }
 
@@ -197,6 +255,20 @@ export class AmazonMusicProvider implements ProviderOptions {
     }
 
     return match[1];
+  }
+
+  private extractTrackAsin(sourceUrl: string): string | null {
+    const trackAsin = new URL(sourceUrl).searchParams.get('trackAsin')?.trim();
+    return trackAsin || null;
+  }
+
+  private buildTrackPlaybackUrl(sourceUrl: string, trackAsin: string): string {
+    const normalized = new URL(sourceUrl);
+    normalized.search = '';
+    normalized.hash = '';
+    normalized.searchParams.set('do', 'play');
+    normalized.searchParams.set('trackAsin', trackAsin);
+    return normalized.toString();
   }
 
   private getCollectionKind(sourceUrl: string): 'album' | 'playlist' {

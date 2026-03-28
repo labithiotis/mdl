@@ -18,8 +18,10 @@ export class DeezerProvider implements ProviderOptions {
       [
         /^\/album\/\d+(?:\/)?$/i,
         /^\/playlist\/\d+(?:\/)?$/i,
+        /^\/track\/\d+(?:\/)?$/i,
         /^\/[a-z]{2}(?:-[a-z]{2})?\/album\/\d+(?:\/)?$/i,
         /^\/[a-z]{2}(?:-[a-z]{2})?\/playlist\/\d+(?:\/)?$/i,
+        /^\/[a-z]{2}(?:-[a-z]{2})?\/track\/\d+(?:\/)?$/i,
       ].some((pattern) => pattern.test(pathname))
     );
   }
@@ -32,6 +34,11 @@ export class DeezerProvider implements ProviderOptions {
     const collectionKind = this.getCollectionKind(url);
     const collectionId = this.extractCollectionId(url);
     const endpoint = `https://api.deezer.com/${collectionKind}/${collectionId}`;
+
+    if (collectionKind === 'track') {
+      return this.fetchTrack(url, endpoint, signal);
+    }
+
     const collectionResponse = await this.fetchJson<
       DeezerPlaylistResponse & { tracks?: DeezerTrackResponse }
     >(endpoint, signal);
@@ -63,6 +70,32 @@ export class DeezerProvider implements ProviderOptions {
       provider: 'deezer',
       sourceUrl: collectionResponse.link?.trim() || url,
       tracks: normalizedTracks,
+    };
+  }
+
+  private async fetchTrack(
+    sourceUrl: string,
+    endpoint: string,
+    signal?: AbortSignal
+  ): Promise<PlaylistMetadata> {
+    const trackResponse = await this.fetchJson<DeezerTrackItem>(
+      endpoint,
+      signal
+    );
+    const track = this.normalizeTrack(trackResponse);
+
+    if (!track) {
+      throw new Error('No track was found in the Deezer response.');
+    }
+
+    return {
+      id: track.id,
+      title: track.title,
+      owner: track.artists[0],
+      artworkUrl: track.artworkUrl,
+      provider: 'deezer',
+      sourceUrl: track.sourceUrl || sourceUrl,
+      tracks: [track],
     };
   }
 
@@ -123,7 +156,9 @@ export class DeezerProvider implements ProviderOptions {
 
   private extractCollectionId(sourceUrl: string): string {
     const parsedUrl = new URL(sourceUrl);
-    const match = parsedUrl.pathname.match(/\/(?:album|playlist)\/(\d+)/i);
+    const match = parsedUrl.pathname.match(
+      /\/(?:album|playlist|track)\/(\d+)/i
+    );
 
     if (!match?.[1]) {
       throw new Error(
@@ -134,10 +169,18 @@ export class DeezerProvider implements ProviderOptions {
     return match[1];
   }
 
-  private getCollectionKind(sourceUrl: string): 'album' | 'playlist' {
-    return new URL(sourceUrl).pathname.includes('/album/')
-      ? 'album'
-      : 'playlist';
+  private getCollectionKind(sourceUrl: string): 'album' | 'playlist' | 'track' {
+    const pathname = new URL(sourceUrl).pathname;
+
+    if (pathname.includes('/album/')) {
+      return 'album';
+    }
+
+    if (pathname.includes('/track/')) {
+      return 'track';
+    }
+
+    return 'playlist';
   }
 }
 
