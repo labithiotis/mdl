@@ -2,12 +2,15 @@ import { describe, expect, test } from 'bun:test';
 import { detectProvider, validateProviderUrl } from './Providers';
 
 describe('providers', () => {
-  test('detects direct playlist and album URLs for every recognized provider', () => {
+  test('detects direct playlist, album, and Spotify track URLs for every recognized provider', () => {
     expect(
       detectProvider('https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2')
     ).toBe('spotify');
     expect(
       detectProvider('https://open.spotify.com/album/6eUW0wxWtzkFdaEFsTJto6')
+    ).toBe('spotify');
+    expect(
+      detectProvider('https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18')
     ).toBe('spotify');
     expect(
       detectProvider(
@@ -78,22 +81,22 @@ describe('providers', () => {
   });
 
   test('rejects malformed URLs and non-provider URLs', async () => {
-    await expect(validateProviderUrl('google.com/example')).rejects.toThrow(
+    expect(validateProviderUrl('google.com/example')).rejects.toThrow(
       /Invalid URL/
     );
-    await expect(
-      validateProviderUrl('https://google.com/example')
-    ).rejects.toThrow(/Unsupported music URL/);
-    await expect(
+    expect(validateProviderUrl('https://google.com/example')).rejects.toThrow(
+      /Unsupported music URL/
+    );
+    expect(
       validateProviderUrl('https://music.apple.com/us/music-video/example/123')
     ).rejects.toThrow(/Unsupported music URL/);
-    await expect(
+    expect(
       validateProviderUrl('https://music.youtube.com/watch?v=dQw4w9WgXcQ')
     ).rejects.toThrow(/Unsupported music URL/);
-    await expect(
+    expect(
       validateProviderUrl('https://soundcloud.com/artist/track-name')
     ).rejects.toThrow(/Unsupported music URL/);
-    await expect(
+    expect(
       validateProviderUrl('https://bandcamp.com/artist/track/example')
     ).rejects.toThrow(/Unsupported music URL/);
   });
@@ -176,14 +179,14 @@ describe('providers', () => {
   });
 
   test('fails when a short link resolves to the wrong provider or non-playlist URL', async () => {
-    await expect(
+    expect(
       validateProviderUrl('https://apple.co/not-a-playlist', {
         resolveUrl: async () =>
           'https://music.apple.com/us/music-video/example/123456789',
       })
     ).rejects.toThrow(/Could not resolve the Apple Music short link/);
 
-    await expect(
+    expect(
       validateProviderUrl('https://spotify.link/wrong-provider', {
         resolveUrl: async () => 'https://www.deezer.com/playlist/1234567890',
       })

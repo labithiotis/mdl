@@ -8,6 +8,40 @@ afterEach(() => {
 });
 
 describe('spotify', () => {
+  test('parses Spotify track metadata from embed page data', () => {
+    const html = `
+<!DOCTYPE html>
+<html>
+  <body>
+    <script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"state":{"data":{"entity":{"type":"track","name":"Kookaburra Sits","uri":"spotify:track:1eJdXVLxLoMWu1TkaeSL18","id":"1eJdXVLxLoMWu1TkaeSL18","title":"Kookaburra Sits","artists":[{"name":"ABC Kids","uri":"spotify:artist:6l7J2uM3bM2BCh0tIPhWx8"}],"duration":57720,"visualIdentity":{"image":[{"url":"https://image-cdn-fa.spotifycdn.com/image/track-art"}]}}}}}}}</script>
+  </body>
+</html>
+`;
+
+    const playlist = provider.parseCollectionHtml(
+      html,
+      'https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18'
+    );
+
+    expect(playlist.id).toBe('1eJdXVLxLoMWu1TkaeSL18');
+    expect(playlist.title).toBe('Kookaburra Sits');
+    expect(playlist.owner).toBe('ABC Kids');
+    expect(playlist.artworkUrl).toBe(
+      'https://image-cdn-fa.spotifycdn.com/image/track-art'
+    );
+    expect(playlist.tracks).toEqual([
+      {
+        id: '1eJdXVLxLoMWu1TkaeSL18',
+        title: 'Kookaburra Sits',
+        artists: ['ABC Kids'],
+        album: undefined,
+        artworkUrl: 'https://image-cdn-fa.spotifycdn.com/image/track-art',
+        durationMs: 57720,
+        sourceUrl: 'https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18',
+      },
+    ]);
+  });
+
   test('parses Spotify album metadata from embed page data', () => {
     const html = `
 <!DOCTYPE html>
@@ -104,6 +138,62 @@ describe('spotify', () => {
       artworkUrl: 'https://i.scdn.co/image/track-art',
       durationMs: 190626,
       sourceUrl: 'https://open.spotify.com/track/4o6BgsqLIBViaGVbx5rbRk',
+    });
+  });
+
+  test('fetches a Spotify track URL as a single-track playlist', async () => {
+    spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          `
+<!DOCTYPE html>
+<html>
+  <body>
+    <script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"state":{"data":{"entity":{"type":"track","name":"Kookaburra Sits","uri":"spotify:track:1eJdXVLxLoMWu1TkaeSL18","id":"1eJdXVLxLoMWu1TkaeSL18","title":"Kookaburra Sits","artists":[{"name":"ABC Kids","uri":"spotify:artist:6l7J2uM3bM2BCh0tIPhWx8"}],"duration":57720,"visualIdentity":{"image":[{"url":"https://image-cdn-fa.spotifycdn.com/image/track-art"}]}}}}}}}</script>
+  </body>
+</html>
+`,
+          { status: 200 }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta property="og:description" content="ABC Kids · Australia&#x27;s Favourite Nursery Rhymes · Song · 2004"/>
+    <meta property="og:image" content="https://i.scdn.co/image/track-art-enriched"/>
+  </head>
+</html>
+`,
+          { status: 200 }
+        )
+      );
+
+    const playlist = await provider.fetch(
+      'https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18',
+      {}
+    );
+
+    expect(playlist).toEqual({
+      id: '1eJdXVLxLoMWu1TkaeSL18',
+      title: 'Kookaburra Sits',
+      owner: 'ABC Kids',
+      artworkUrl: 'https://image-cdn-fa.spotifycdn.com/image/track-art',
+      provider: 'spotify',
+      sourceUrl: 'https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18',
+      tracks: [
+        {
+          id: '1eJdXVLxLoMWu1TkaeSL18',
+          title: 'Kookaburra Sits',
+          artists: ['ABC Kids'],
+          album: "Australia's Favourite Nursery Rhymes",
+          artworkUrl: 'https://i.scdn.co/image/track-art-enriched',
+          durationMs: 57720,
+          sourceUrl: 'https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18',
+        },
+      ],
     });
   });
 

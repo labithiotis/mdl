@@ -20,7 +20,9 @@ export class SpotifyProvider implements ProviderOptions {
       [
         /^\/album\/[A-Za-z0-9]+(?:\/)?$/i,
         /^\/playlist\/[A-Za-z0-9]+(?:\/)?$/i,
+        /^\/track\/[A-Za-z0-9]+(?:\/)?$/i,
         /^\/intl-[a-z]{2}\/album\/[A-Za-z0-9]+(?:\/)?$/i,
+        /^\/intl-[a-z]{2}\/track\/[A-Za-z0-9]+(?:\/)?$/i,
         /^\/user\/[^/]+\/playlist\/[A-Za-z0-9]+(?:\/)?$/i,
         /^\/intl-[a-z]{2}\/playlist\/[A-Za-z0-9]+(?:\/)?$/i,
       ].some((pattern) => pattern.test(pathname))
@@ -43,11 +45,15 @@ export class SpotifyProvider implements ProviderOptions {
 
     const playlist = this.parseCollectionHtml(await response.text(), url);
 
-    if (collectionKind !== 'playlist') {
-      return playlist;
+    if (collectionKind === 'playlist') {
+      return this.enrichPlaylistTracks(playlist);
     }
 
-    return this.enrichPlaylistTracks(playlist);
+    if (collectionKind === 'track') {
+      return this.enrichTrackCollection(playlist);
+    }
+
+    return playlist;
   }
 
   public parseCollectionHtml(
@@ -56,17 +62,21 @@ export class SpotifyProvider implements ProviderOptions {
   ): PlaylistMetadata {
     const entity = this.extractEntity(html);
     const collectionKind = this.getCollectionKind(sourceUrl);
+    const owner = this.getEntityOwner(entity);
     const title =
       entity.title?.trim() ||
       entity.name?.trim() ||
-      `Spotify ${collectionKind === 'album' ? 'Album' : 'Playlist'}`;
+      this.getFallbackCollectionTitle(collectionKind);
     const artworkUrl = getFirstNonEmptyString(
       entity.coverArt?.sources?.[0]?.url,
       entity.visualIdentity?.image?.[0]?.url
     );
-    const tracks = (entity.trackList ?? [])
-      .map((track) => this.normalizeTrack(track, title, artworkUrl))
-      .filter((track): track is PlaylistTrack => track !== null);
+    const tracks =
+      collectionKind === 'track'
+        ? this.normalizeTrackCollection(entity, artworkUrl)
+        : (entity.trackList ?? [])
+            .map((track) => this.normalizeTrack(track, title, artworkUrl))
+            .filter((track): track is PlaylistTrack => track !== null);
 
     if (tracks.length === 0) {
       throw new Error(`No tracks were found in the Spotify ${collectionKind}.`);
@@ -79,7 +89,7 @@ export class SpotifyProvider implements ProviderOptions {
         this.extractId(sourceUrl, collectionKind) ||
         `${collectionKind}-${Date.now()}`,
       title,
-      owner: entity.subtitle?.trim() || undefined,
+      owner,
       artworkUrl,
       provider: 'spotify',
       sourceUrl,
@@ -99,11 +109,40 @@ export class SpotifyProvider implements ProviderOptions {
     const payload = JSON.parse(payloadMatch[1]) as SpotifyEmbedPayload;
     const entity = payload.props?.pageProps?.state?.data?.entity;
 
-    if (!entity?.type || !entity.title || !Array.isArray(entity.trackList)) {
+    if (!entity?.type || !entity.title) {
       throw new Error('Could not parse Spotify collection data from the page.');
     }
 
     return entity;
+  }
+
+  private normalizeTrackCollection(
+    entity: SpotifyEntity,
+    collectionArtworkUrl?: string
+  ): PlaylistTrack[] {
+    const title = entity.title?.trim() || entity.name?.trim();
+    const artists = entity.artists
+      ?.map((artist) => artist.name?.trim())
+      .filter((artist): artist is string => Boolean(artist));
+    const id =
+      entity.id?.trim() || this.extractId(entity.uri, 'track') || undefined;
+
+    if (!title || !artists?.length || !id) {
+      return [];
+    }
+
+    return [
+      {
+        id,
+        title,
+        artists,
+        album: undefined,
+        artworkUrl: collectionArtworkUrl,
+        durationMs:
+          typeof entity.duration === 'number' ? entity.duration : undefined,
+        sourceUrl: this.getTrackUrl(entity.uri) ?? this.getTrackUrl(id),
+      },
+    ];
   }
 
   private normalizeTrack(
@@ -173,6 +212,33 @@ export class SpotifyProvider implements ProviderOptions {
     return {
       ...playlist,
       tracks,
+    };
+  }
+
+  private async enrichTrackCollection(
+    playlist: PlaylistMetadata
+  ): Promise<PlaylistMetadata> {
+    const [track] = playlist.tracks;
+
+    if (!track?.sourceUrl) {
+      return playlist;
+    }
+
+    const trackMetadata = await this.fetchTrackPageMetadata(track.sourceUrl);
+
+    if (!trackMetadata?.album && !trackMetadata?.artworkUrl) {
+      return playlist;
+    }
+
+    return {
+      ...playlist,
+      tracks: [
+        {
+          ...track,
+          album: trackMetadata.album ?? track.album,
+          artworkUrl: trackMetadata.artworkUrl ?? track.artworkUrl,
+        },
+      ],
     };
   }
 
@@ -290,7 +356,7 @@ export class SpotifyProvider implements ProviderOptions {
 
   private extractId(
     value: string | undefined,
-    entity: 'album' | 'playlist' | 'track'
+    entity: SpotifyCollectionKind
   ): string | undefined {
     if (!value) {
       return undefined;
@@ -303,16 +369,49 @@ export class SpotifyProvider implements ProviderOptions {
   }
 
   private getTrackUrl(uri?: string): string | undefined {
-    const trackId = this.extractId(uri, 'track');
+    const trackId = this.extractId(uri, 'track') ?? uri?.trim();
     return trackId ? `https://open.spotify.com/track/${trackId}` : undefined;
   }
 
-  private getCollectionKind(sourceUrl: string): 'album' | 'playlist' {
-    return new URL(sourceUrl).pathname.includes('/album/')
-      ? 'album'
-      : 'playlist';
+  private getCollectionKind(sourceUrl: string): SpotifyCollectionKind {
+    const pathname = new URL(sourceUrl).pathname;
+
+    if (pathname.includes('/album/')) {
+      return 'album';
+    }
+
+    if (pathname.includes('/track/')) {
+      return 'track';
+    }
+
+    return 'playlist';
+  }
+
+  private getEntityOwner(entity: SpotifyEntity): string | undefined {
+    const artistNames = entity.artists
+      ?.map((artist) => artist.name?.trim())
+      .filter((artist): artist is string => Boolean(artist));
+
+    return getFirstNonEmptyString(
+      entity.subtitle?.trim(),
+      artistNames?.join(', ')
+    );
+  }
+
+  private getFallbackCollectionTitle(
+    collectionKind: SpotifyCollectionKind
+  ): string {
+    const collectionTypeLabelByKind: Record<SpotifyCollectionKind, string> = {
+      album: 'Album',
+      playlist: 'Playlist',
+      track: 'Track',
+    };
+
+    return `Spotify ${collectionTypeLabelByKind[collectionKind]}`;
   }
 }
+
+type SpotifyCollectionKind = 'album' | 'playlist' | 'track';
 
 type SpotifyEmbedPayload = {
   props?: {
@@ -327,17 +426,22 @@ type SpotifyEmbedPayload = {
 };
 
 type SpotifyEntity = {
+  artists?: Array<{
+    name?: string;
+    uri?: string;
+  }>;
   coverArt?: {
     sources?: Array<{
       url?: string;
     }>;
   };
+  duration?: number;
   id?: string;
   name?: string;
   subtitle?: string;
   title?: string;
   trackList?: SpotifyTrackItem[];
-  type?: 'album' | 'playlist';
+  type?: SpotifyCollectionKind;
   uri?: string;
   visualIdentity?: {
     image?: Array<{
