@@ -44,6 +44,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky",
     "test": "bun run --filter . '/^test:/'",
     "test:unit": "bun test src",
     "test:e2e": "bun test e2e"
@@ -52,7 +54,7 @@
     "effect": "3.21.0",
     "ink": "6.8.0",
     "ink-scroll-view": "0.3.6",
-    "ink-spinner": "^5.0.0",
+    "ink-spinner": "5.0.0",
     "ink-text-input": "6.0.0",
     "react": "19.2.0",
     "sanitize-filename": "1.6.4",
@@ -62,6 +64,7 @@
     "@biomejs/biome": "2.4.8",
     "@types/bun": "latest",
     "@types/react": "19.2.2",
+    "husky": "9.1.7",
     "ink-testing-library": "4.0.0",
     "react-devtools-core": "7.0.1",
     "typescript": "6.0.2"

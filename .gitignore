@@ -1,4 +1,5 @@
 node_modules/
+.husky/_/
 release/
 dist/
 music/
