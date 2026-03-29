@@ -265,3 +265,28 @@ jobs:
               --title "$RELEASE_NAME" \
               --notes "$RELEASE_NOTES"
           fi
+
+  publish-npm:
+    name: Publish to NPM
+    needs:
+      - release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build npm package
+        run: bun run build:npm
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
