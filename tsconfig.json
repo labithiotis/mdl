@@ -8,13 +8,12 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist",
     "rootDir": "src",
-    "resolveJsonModule": true,
+    "outDir": "release",
     "types": ["bun-types", "react"]
   },
-  "include": ["src/**/*"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "e2e/**/*"]
+  "include": ["src/**/*"]
 }

@@ -1,6 +1,6 @@
 {
-  "name": "mdl",
-  "version": "0.0.1",
+  "name": "mdlx-cli",
+  "version": "0.0.2",
   "description": "Interactive CLI for syncing music locally via YouTube.",
   "packageManager": "bun@1.3.10",
   "type": "module",
@@ -22,11 +22,24 @@
     "tidal"
   ],
   "bin": {
-    "mdl": "./dist/cli.js"
+    "mdlx-cli": "release/cli.js"
+  },
+  "engines": {
+    "bun": ">=1",
+    "node": ">=18"
+  },
+  "files": [
+    "release"
+  ],
+  "homepage": "https://github.com/labithiotis/mdl",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/labithiotis/mdl.git"
   },
   "scripts": {
     "dev": "bun run src/cli.tsx",
     "build": "bun build --compile --minify ./src/cli.tsx --outfile release/mdl",
+    "build:npm": "bun build --compile --minify --target=node ./src/cli.tsx --outfile release/cli.js",
     "fmt": "biome format --write .",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

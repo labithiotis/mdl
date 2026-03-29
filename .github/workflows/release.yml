@@ -230,7 +230,7 @@ jobs:
       - name: Download built release artifacts
         uses: actions/download-artifact@v8
         with:
-          path: dist
+          path: release
           pattern: release-*
           merge-multiple: true
 
@@ -244,10 +244,10 @@ jobs:
         shell: bash
         run: |
           shopt -s nullglob
-          files=(dist/*)
+          files=(release/*)
 
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "No release artifacts found in dist/"
+            echo "No release artifacts found in release/"
             exit 1
           fi
 
