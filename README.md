@@ -6,6 +6,9 @@
 
 Paste a URL, and the tool resolves music metadata, searches YouTube for matches, and downloads tracks. It stores a local sync manifest so future runs can reconcile the folder instead of starting over.
 
+![mdl](https://github.com/user-attachments/assets/796efc3b-9512-4d1c-9377-c51b89aa9437)
+
+
 ## Provider support
 
 Recognized providers:
@@ -39,10 +42,17 @@ Current implementation status:
 
 `ffmpeg` must already be installed and available on your `PATH`.
 
+
+### NPM(x)
+
+```bash
+npx mdlx-cli
+```
+> mdl and divrits are all "squated" 😢
+
 ### Homebrew (COMING SOON)
 
 ```bash
-brew tap labithiotis/mdl
 brew install mdl
 ```
 
