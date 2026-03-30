@@ -269,13 +269,17 @@ jobs:
   publish-npm:
     name: Publish to NPM
     needs:
+      - prepare
       - release
     runs-on: ubuntu-latest
     steps:
       - name: Check out release tag
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Set up Node.js for npm publish
+        uses: actions/setup-node@v4
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
