@@ -34,7 +34,7 @@ Current implementation status:
 - Interactive CLI
 - Links work without API keys, we query via public urls
 - Downloads are grouped into a music name directory
-- A `_mdl.json` manifest is written next to the files for resyncs
+- A `.mdl.json` manifest is written next to the files for resyncs
 - Metadata is resolved directly from the music URL
 - Audio is currently sourced from YouTube
 

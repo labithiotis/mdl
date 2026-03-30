@@ -9,7 +9,7 @@ import {
   ManifestDecodeError,
 } from './utils';
 
-export const MANIFEST_FILE_NAME = '_mdl.json';
+export const MANIFEST_FILE_NAME = '.mdl.json';
 
 export async function loadManifest(
   directory: string
