@@ -290,10 +290,10 @@ jobs:
       - name: Build npm package
         run: bun run build:npm
 
-      - name: Configure npm registry auth
-        run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > .npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+      # - name: Configure npm registry auth
+      #   run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > .npmrc
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Publish to npm
         run: npm publish --access public
