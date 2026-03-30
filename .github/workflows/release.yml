@@ -171,10 +171,10 @@ jobs:
             artifact_suffix: macos-x64
             runner: macos-14
             target: bun-darwin-x64
-          - artifact_name: release-win-x64
-            artifact_suffix: windows-x64
-            runner: windows-latest
-            target: bun-windows-x64
+          # - artifact_name: release-win-x64
+          #   artifact_suffix: windows-x64
+          #   runner: windows-latest
+          #   target: bun-windows-x64
 
     runs-on: ${{ matrix.runner }}
 
