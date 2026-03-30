@@ -39,7 +39,7 @@
   "scripts": {
     "dev": "bun run src/cli.tsx",
     "build": "bun build --compile --minify ./src/cli.tsx --outfile release/mdl",
-    "build:npm": "bun build --compile --minify --target=node ./src/cli.tsx --outfile release/cli.js",
+    "build:npm": "bun build --minify --target=node ./src/cli.tsx --outfile release/cli.js && node -e \"let f='release/cli.js';require('fs').writeFileSync(f,'#!/usr/bin/env node\\n'+require('fs').readFileSync(f,'utf8'))\"",
     "fmt": "biome format --write .",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

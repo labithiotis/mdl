@@ -280,8 +280,6 @@ jobs:
 
       - name: Set up Node.js for npm publish
         uses: actions/setup-node@v6
-        with:
-          registry-url: https://registry.npmjs.org
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -292,7 +290,10 @@ jobs:
       - name: Build npm package
         run: bun run build:npm
 
-      - name: Publish to npm
-        run: npm publish --access public
+      - name: Configure npm registry auth
+        run: echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > .npmrc
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        run: npm publish --access public
