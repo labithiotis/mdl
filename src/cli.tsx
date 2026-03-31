@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import path from 'node:path';
 import { render } from 'ink';
 import { parseCliArgs } from './lib/args';
