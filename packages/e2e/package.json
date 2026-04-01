@@ -1,0 +1,18 @@
+{
+  "name": "@mdl/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test .",
+    "test:e2e": "bun test ."
+  },
+  "dependencies": {
+    "@mdl/cli": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "ink-testing-library": "4.0.0",
+    "react": "19.2.0"
+  }
+}

@@ -64,6 +64,7 @@ jobs:
         env:
           RELEASE_BUMP: ${{ github.event.inputs.bump }}
           RELEASE_VERSION: ${{ github.event.inputs.version }}
+        working-directory: packages/cli
         run: |
           if [ -n "${RELEASE_VERSION}" ]; then
             npm version "${RELEASE_VERSION}" --no-git-tag-version --allow-same-version
@@ -142,7 +143,7 @@ jobs:
             exit 1
           fi
 
-          git add package.json
+          git add packages/cli/package.json
           git commit -m "release: v${{ steps.version.outputs.version }}"
           git tag -a "${{ steps.version.outputs.tag }}" -m "$RELEASE_NOTES"
           git push origin main
@@ -191,6 +192,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build release artifact
+        working-directory: packages/cli
         run: bun run build --target "${{ matrix.target }}"
 
       - name: Determine archive name
@@ -207,12 +209,12 @@ jobs:
 
       - name: Archive Unix release bundle
         if: runner.os != 'Windows'
-        run: tar -czf "${{ steps.archive.outputs.name }}" -C release .
+        run: tar -czf "${{ steps.archive.outputs.name }}" -C packages/cli/release .
 
       - name: Archive Windows release bundle
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path release\* -DestinationPath "${{ steps.archive.outputs.name }}"
+        run: Compress-Archive -Path packages\cli\release\* -DestinationPath "${{ steps.archive.outputs.name }}"
 
       - name: Upload release artifact bundle
         uses: actions/upload-artifact@v6
@@ -288,14 +290,16 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build npm package
+        working-directory: packages/cli
         run: bun run build:npm
 
       - name: Configure npm registry auth
-        run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > .npmrc
+        run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > packages/cli/.npmrc
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Publish to npm
+        working-directory: packages/cli
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}

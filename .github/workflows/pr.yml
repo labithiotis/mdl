@@ -3,6 +3,8 @@ name: PR
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "packages/**"
 
 permissions:
   contents: read

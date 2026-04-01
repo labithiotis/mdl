@@ -1,0 +1,67 @@
+{
+  "name": "@mdl/cli",
+  "version": "0.0.15",
+  "description": "Interactive CLI for syncing music locally via YouTube.",
+  "type": "module",
+  "author": "Labithiotis",
+  "license": "MIT",
+  "keywords": [
+    "cli",
+    "mdl",
+    "music",
+    "downloader",
+    "spotify",
+    "apple music",
+    "amazon music",
+    "youtube music",
+    "soundcloud",
+    "bandcamp",
+    "qobuz",
+    "deezer",
+    "tidal"
+  ],
+  "bin": {
+    "mdl": "release/cli.js"
+  },
+  "engines": {
+    "bun": ">=1",
+    "node": ">=18"
+  },
+  "files": [
+    "release"
+  ],
+  "exports": {
+    ".": "./src/cli.tsx",
+    "./lib/*": "./src/lib/*.ts",
+    "./ui/app": "./src/ui/app.tsx"
+  },
+  "homepage": "https://github.com/labithiotis/mdl",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/labithiotis/mdl.git"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.tsx",
+    "build": "bun build --compile --minify ./src/cli.tsx --outfile release/mdl",
+    "build:npm": "bun build --minify --target=node ./src/cli.tsx --outfile release/cli.js",
+    "check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src",
+    "test:unit": "bun test src"
+  },
+  "dependencies": {
+    "effect": "3.21.0",
+    "ink": "6.8.0",
+    "ink-scroll-view": "0.3.6",
+    "ink-spinner": "5.0.0",
+    "ink-text-input": "6.0.0",
+    "react": "19.2.0",
+    "sanitize-filename": "1.6.4",
+    "youtubei.js": "17.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "ink-testing-library": "4.0.0",
+    "react-devtools-core": "7.0.1"
+  }
+}
