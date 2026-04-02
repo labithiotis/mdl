@@ -21,9 +21,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile --filter @mdl/web
 
-      - name: Type checks
+      - name: Build
         working-directory: packages/web
-        run: bun run check
+        run: bun run build
 
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
