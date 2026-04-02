@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { Provider } from '@mdl/cli/lib/types';
-import { App } from '@mdl/cli/ui/app';
+import type { Provider } from '@mdlx/cli/lib/types';
+import { App } from '@mdlx/cli/ui/app';
 import { render } from 'ink-testing-library';
 import { waitFor, waitForValue } from './utils';
 

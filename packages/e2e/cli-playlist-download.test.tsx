@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { MANIFEST_FILE_NAME } from '@mdl/cli/lib/manifest';
-import type { SyncManifest } from '@mdl/cli/lib/types';
-import { App } from '@mdl/cli/ui/app';
+import { MANIFEST_FILE_NAME } from '@mdlx/cli/lib/manifest';
+import type { SyncManifest } from '@mdlx/cli/lib/types';
+import { App } from '@mdlx/cli/ui/app';
 import { render } from 'ink-testing-library';
 import { waitFor } from './utils';
 

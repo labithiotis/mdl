@@ -12,8 +12,8 @@
       },
     },
     "packages/cli": {
-      "name": "@mdl/cli",
-      "version": "0.0.15",
+      "name": "@mdlx/cli",
+      "version": "0.0.17",
       "bin": {
         "mdl": "release/cli.js",
       },
@@ -37,7 +37,7 @@
       "name": "@mdl/e2e",
       "version": "0.0.0",
       "dependencies": {
-        "@mdl/cli": "workspace:*",
+        "@mdlx/cli": "workspace:*",
       },
       "devDependencies": {
         "@types/react": "19.2.2",
@@ -209,11 +209,11 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.9", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.0.3", "@jridgewell/sourcemap-codec": "^1.4.10" } }, "sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ=="],
 
-    "@mdl/cli": ["@mdl/cli@workspace:packages/cli"],
-
     "@mdl/e2e": ["@mdl/e2e@workspace:packages/e2e"],
 
     "@mdl/web": ["@mdl/web@workspace:packages/web"],
+
+    "@mdlx/cli": ["@mdlx/cli@workspace:packages/cli"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.2", "", { "dependencies": { "@tybys/wasm-util": "^0.10.1" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-sNXv5oLJ7ob93xkZ1XnxisYhGYXfaG9f65/ZgYuAu3qt7b3NadcOEhLvx28hv31PgX8SZJRYrAIPQilQmFpLVw=="],
 

@@ -300,6 +300,14 @@ jobs:
 
       - name: Publish to npm
         working-directory: packages/cli
-        run: npm publish --access public --workspaces=false
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        run: |
+          npm publish --access public --workspaces=false
+          # Publish package again under a different name
+          node -e "
+            const pkg = require('./package.json');
+            pkg.name = 'mdlx-cli';
+            require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          npm publish --access public --workspaces=false

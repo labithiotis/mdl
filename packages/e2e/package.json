@@ -8,7 +8,7 @@
     "test:e2e": "bun test ."
   },
   "dependencies": {
-    "@mdl/cli": "workspace:*"
+    "@mdlx/cli": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.2.2",

@@ -2,17 +2,18 @@
 
 ## Setup
 
-1. Install Node.js 24+ and `pnpm`.
+1. Install Node.js 24+ and `bun`.
 2. Install dependencies:
 
 ```bash
-pnpm install
+bun install
 ```
 
 3. Start the CLI in development mode:
 
 ```bash
-pnpm dev
+cd packages/cli
+bun dev
 ```
 
 ## Local checks

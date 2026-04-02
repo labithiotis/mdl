@@ -5,3 +5,4 @@ dist/
 music/
 .DS_Store
 *.tsbuildinfo
+*.tgz

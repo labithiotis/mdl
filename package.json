@@ -1,6 +1,4 @@
 {
-  "name": "mdl",
-  "private": true,
   "packageManager": "bun@1.3.10",
   "workspaces": [
     "packages/*"
@@ -13,7 +11,7 @@
     "check": "bun run typecheck",
     "typecheck": "tsc --noEmit -p packages/cli/tsconfig.json",
     "test": "bun run --filter '@mdl/*' --parallel test",
-    "test:unit": "bun run --filter '@mdl/cli' test:unit",
+    "test:unit": "bun run --filter '@mdlx/cli' test:unit",
     "test:e2e": "bun run --filter '@mdl/e2e' test"
   },
   "devDependencies": {
