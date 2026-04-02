@@ -1,6 +1,6 @@
 {
   "name": "@mdlx/cli",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Interactive CLI for syncing music locally via YouTube.",
   "type": "module",
   "author": "Labithiotis",
