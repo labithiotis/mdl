@@ -8,7 +8,7 @@ import { Providers } from './components/Providers';
 
 export function App() {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-violet-950 selection:text-violet-50">
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl animate-pulse-glow" />
         <div className="absolute top-1/3 -left-40 h-96 w-96 rounded-full bg-fuchsia-600/8 blur-3xl animate-pulse-glow animation-delay-200" />
