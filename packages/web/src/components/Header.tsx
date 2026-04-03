@@ -11,12 +11,12 @@ export function Header() {
             aria-hidden="true"
             className="h-8 w-8 transition-transform group-hover:scale-105"
           />
-          <span className="font-mono text-lg font-semibold tracking-tight">
+          <span className="font-mono text-lg font-semibold tracking-tight hidden sm:inline-block">
             mdl
           </span>
         </a>
 
-        <nav className="flex items-center gap-6">
+        <nav className="flex items-center gap-4 sm:gap-6">
           <a
             href="#demo"
             className="text-sm text-zinc-400 transition-colors hover:text-zinc-100"

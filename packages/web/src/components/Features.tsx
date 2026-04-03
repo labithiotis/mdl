@@ -175,9 +175,9 @@ function FeatureCard({
 
   return (
     <div
-      className={`animate-fade-in-up ${delayClass} group rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-6 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-800/40`}
+      className={`animate-fade-in-up ${delayClass} group rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-6 text-center transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-800/40 sm:text-left`}
     >
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400 transition-colors group-hover:bg-violet-500/20">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400 transition-colors group-hover:bg-violet-500/20 sm:mx-0">
         {feature.icon}
       </div>
       <h3 className="mb-2 text-lg font-semibold text-zinc-100">

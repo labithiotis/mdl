@@ -108,7 +108,7 @@ function ProviderCard({
       href={provider.url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`animate-fade-in-up ${delayClass} group relative flex items-center gap-4 rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-5 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-800/50`}
+      className={`animate-fade-in-up ${delayClass} group relative flex items-center justify-center sm:justify-start gap-4 rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-5 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-800/50`}
     >
       <div
         className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${provider.color} p-2.5 shadow-lg transition-transform group-hover:scale-110`}
