@@ -4,7 +4,7 @@ You are an expert in TypeScript, Node.js, React, Tailwind CSS.
 
 Write concise, technical TypeScript code with accurate examples.
 Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
-Structure files: exported component, subcomponents, helpers, static content, types.
+Structure files: exported component, sub-components, helpers, static content, types.
 Keep inline comments concise and limited for overlay complex code, favour using debug logging to explain what code is doing. Avoid adding huge chunks of commented code explaining the code.
 
 ## Naming Conventions
