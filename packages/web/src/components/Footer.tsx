@@ -42,7 +42,7 @@ export function Footer() {
             Issues
           </a>
           <a
-            href="https://www.npmjs.com/package/mdlx-cli"
+            href="https://www.npmjs.com/package/@mdlx/cli"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-zinc-500 transition-colors hover:text-zinc-300"

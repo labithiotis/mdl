@@ -9,17 +9,17 @@ interface InstallMethod {
 const INSTALL_METHODS: readonly InstallMethod[] = [
   {
     label: 'npx',
-    command: 'npx mdlx-cli',
+    command: 'npx @mdlx/cli',
     description: 'Run directly with npx - no install needed',
   },
   {
     label: 'bun',
-    command: 'bunx mdlx-cli',
+    command: 'bunx @mdlx/cli',
     description: 'Run directly with bun',
   },
   {
     label: 'npm',
-    command: 'npm install -g mdlx-cli',
+    command: 'npm install -g @mdlx/cli',
     description: 'Install globally with npm',
   },
   {

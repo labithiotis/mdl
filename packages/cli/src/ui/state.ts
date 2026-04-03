@@ -35,12 +35,12 @@ export type Phase =
     }
   | { kind: 'error'; message: string };
 
-export type AppState = {
+type AppState = {
   url: string;
   phase: Phase;
 };
 
-export type Action =
+type Action =
   | { type: 'set-url'; value: string }
   | { type: 'submit-url'; value: string }
   | { type: 'input-error'; message: string }

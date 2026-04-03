@@ -108,10 +108,7 @@ export function ListPanel<Item>({
   );
 }
 
-export function getViewportHeight(
-  terminalRows: number,
-  minRows: number
-): number {
+function getViewportHeight(terminalRows: number, minRows: number): number {
   return Math.max(
     MIN_VIEWPORT_HEIGHT,
     Math.min(terminalRows, Math.max(minRows, MIN_VIEWPORT_HEIGHT))

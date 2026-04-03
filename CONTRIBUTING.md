@@ -21,9 +21,9 @@ bun dev
 Run the same checks expected in pull requests before opening one:
 
 ```bash
-pnpm lint
-pnpm check
-pnpm test
+bun lint
+bun check
+bun test
 ```
 
 The end-to-end test downloads media and can take several minutes to finish.
