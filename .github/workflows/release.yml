@@ -268,22 +268,13 @@ jobs:
               --notes "$RELEASE_NOTES"
           fi
 
-  update-homebrew-formula:
-    name: Update Homebrew Formula
+  release-homebrew:
+    name: Release to Homebrew
     needs:
       - prepare
       - release
     runs-on: ubuntu-latest
     steps:
-      - name: Check out main
-        uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
       - name: Download built release artifacts
         uses: actions/download-artifact@v8
         with:
@@ -291,50 +282,26 @@ jobs:
           pattern: release-*
           merge-multiple: true
 
-      - name: Update Homebrew formula
-        env:
-          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Trigger tap workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          repo: labithiotis/homebrew-tap
+          workflow: update-mdl-formula.yml
+          ref: main
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          inputs: >-
+            {
+              "source_repository": "labithiotis/mdl",
+              "tag": "${{ needs.prepare.outputs.tag }}",
+              "version": "${{ needs.prepare.outputs.version }}",
+              "linux_arm64_sha": "${{ steps.sha.outputs.linux_arm64 }}",
+              "linux_x64_sha": "${{ steps.sha.outputs.linux_x64 }}",
+              "macos_arm64_sha": "${{ steps.sha.outputs.macos_arm64 }}",
+              "macos_x64_sha": "${{ steps.sha.outputs.macos_x64 }}"
+            }
 
-          linux_arm64_sha="$(sha256sum "release/mdl-${RELEASE_TAG}-linux-arm64.tar.gz" | cut -d' ' -f1)"
-          linux_x64_sha="$(sha256sum "release/mdl-${RELEASE_TAG}-linux-x64.tar.gz" | cut -d' ' -f1)"
-          macos_arm64_sha="$(sha256sum "release/mdl-${RELEASE_TAG}-macos-arm64.tar.gz" | cut -d' ' -f1)"
-          macos_x64_sha="$(sha256sum "release/mdl-${RELEASE_TAG}-macos-x64.tar.gz" | cut -d' ' -f1)"
-
-          bun scripts/updateHomebrewFormula.ts \
-            --formula Formula/mdl.rb \
-            --github-repository "${GITHUB_REPOSITORY}" \
-            --version "${RELEASE_VERSION}" \
-            --linux-arm64-sha "${linux_arm64_sha}" \
-            --linux-x64-sha "${linux_x64_sha}" \
-            --macos-arm64-sha "${macos_arm64_sha}" \
-            --macos-x64-sha "${macos_x64_sha}"
-
-      - name: Commit formula update
-        env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if git diff --quiet -- Formula/mdl.rb; then
-            echo "Formula already up to date."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula/mdl.rb
-          git commit -m "release: update Homebrew formula for v${RELEASE_VERSION}"
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main
-
-  publish-npm:
-    name: Publish to NPM
+  release-npm:
+    name: Release to NPM
     needs:
       - prepare
       - release
