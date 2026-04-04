@@ -58,10 +58,10 @@ bunx @mdlx/cli
 pnpx @mdlx/cli
 ```
 
-### Homebrew (COMING SOON)
+### Homebrew
 
 ```bash
-brew install mdl
+brew tap labithiotis/homebrew-tap && brew install mdl
 ```
 
 ### Manual
