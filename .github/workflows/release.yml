@@ -228,6 +228,11 @@ jobs:
       - prepare
       - build
     runs-on: ubuntu-latest
+    outputs:
+      linux_arm64_sha: ${{ steps.asset_sha.outputs.linux_arm64 }}
+      linux_x64_sha: ${{ steps.asset_sha.outputs.linux_x64 }}
+      macos_arm64_sha: ${{ steps.asset_sha.outputs.macos_arm64 }}
+      macos_x64_sha: ${{ steps.asset_sha.outputs.macos_x64 }}
     steps:
       - name: Download built release artifacts
         uses: actions/download-artifact@v8
@@ -268,6 +273,39 @@ jobs:
               --notes "$RELEASE_NOTES"
           fi
 
+      - name: Output asset SHA's
+        id: asset_sha
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_json="$(gh api "repos/${GH_REPO}/releases/tags/${RELEASE_TAG}")"
+
+          linux_arm64="$(jq -r '.assets[] | select(.name == "mdl-'"${RELEASE_TAG}"'-linux-arm64.tar.gz") | .digest' <<< "$release_json" | sed 's/^sha256://')"
+          linux_x64="$(jq -r '.assets[] | select(.name == "mdl-'"${RELEASE_TAG}"'-linux-x64.tar.gz") | .digest' <<< "$release_json" | sed 's/^sha256://')"
+          macos_arm64="$(jq -r '.assets[] | select(.name == "mdl-'"${RELEASE_TAG}"'-macos-arm64.tar.gz") | .digest' <<< "$release_json" | sed 's/^sha256://')"
+          macos_x64="$(jq -r '.assets[] | select(.name == "mdl-'"${RELEASE_TAG}"'-macos-x64.tar.gz") | .digest' <<< "$release_json" | sed 's/^sha256://')"
+
+          for value_name in linux_arm64 linux_x64 macos_arm64 macos_x64; do
+            value="${!value_name}"
+
+            if [ -z "${value}" ] || [ "${value}" = "null" ]; then
+              echo "Missing release digest for ${value_name}"
+              exit 1
+            fi
+          done
+
+          {
+            echo "linux_arm64=${linux_arm64}"
+            echo "linux_x64=${linux_x64}"
+            echo "macos_arm64=${macos_arm64}"
+            echo "macos_x64=${macos_x64}"
+          } >> "$GITHUB_OUTPUT"
+
   release-homebrew:
     name: Release to Homebrew
     needs:
@@ -275,13 +313,6 @@ jobs:
       - release
     runs-on: ubuntu-latest
     steps:
-      - name: Download built release artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: release
-          pattern: release-*
-          merge-multiple: true
-
       - name: Trigger tap workflow
         uses: benc-uk/workflow-dispatch@v1
         with:
@@ -294,10 +325,10 @@ jobs:
               "source_repository": "labithiotis/mdl",
               "tag": "${{ needs.prepare.outputs.tag }}",
               "version": "${{ needs.prepare.outputs.version }}",
-              "linux_arm64_sha": "${{ steps.sha.outputs.linux_arm64 }}",
-              "linux_x64_sha": "${{ steps.sha.outputs.linux_x64 }}",
-              "macos_arm64_sha": "${{ steps.sha.outputs.macos_arm64 }}",
-              "macos_x64_sha": "${{ steps.sha.outputs.macos_x64 }}"
+              "linux_arm64_sha": "${{ needs.release.outputs.linux_arm64_sha }}",
+              "linux_x64_sha": "${{ needs.release.outputs.linux_x64_sha }}",
+              "macos_arm64_sha": "${{ needs.release.outputs.macos_arm64_sha }}",
+              "macos_x64_sha": "${{ needs.release.outputs.macos_x64_sha }}"
             }
 
   release-npm:
