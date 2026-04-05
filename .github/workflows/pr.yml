@@ -36,5 +36,8 @@ jobs:
       - name: Tests unit
         run: bun test:unit
 
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Tests e2e
         run: bun test:e2e
