@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test .",
-    "test:e2e": "bun test ."
+    "test": "bun test --bail=1 .",
+    "test:e2e": "bun test --bail=1 ."
   },
   "dependencies": {
     "@mdlx/cli": "workspace:*"

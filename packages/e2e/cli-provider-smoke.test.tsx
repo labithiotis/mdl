@@ -5,7 +5,13 @@ import path from 'node:path';
 import type { Provider } from '@mdlx/cli/lib/types';
 import { App } from '@mdlx/cli/ui/app';
 import { render } from 'ink-testing-library';
-import { waitFor, waitForValue } from './utils';
+import {
+  formatRecentFrames,
+  getLatestFrame,
+  isErrorFrame,
+  waitFor,
+  waitForDownloadedFileOrThrow,
+} from './utils';
 
 const ALBUM_EXAMPLES: Record<Provider, string> = {
   spotify: 'https://open.spotify.com/album/6eUW0wxWtzkFdaEFsTJto6',
@@ -70,17 +76,25 @@ async function runProviderSmokeTest(
   );
 
   try {
-    await waitFor(
-      () =>
-        hasAnyFrame(app.frames, 'Playlist') &&
-        hasAnyFrame(app.frames, 'Tracks'),
-      `${provider} ${exampleKind} sync screen`
-    );
+    await waitFor(() => {
+      const latestFrame = getLatestFrame(app);
 
-    const firstDownloadedFile = await waitForValue(
-      () => findFirstDownloadedFile(outputRoot),
-      `${provider} ${exampleKind} first downloaded audio file`
-    );
+      if (isErrorFrame(latestFrame)) {
+        throw new Error(
+          `The app exited before rendering the sync screen for ${provider} ${exampleKind}.\n\n${formatRecentFrames(app.frames)}`
+        );
+      }
+
+      return (
+        hasAnyFrame(app.frames, 'Playlist') && hasAnyFrame(app.frames, 'Tracks')
+      );
+    }, `${provider} ${exampleKind} sync screen`);
+
+    const firstDownloadedFile = await waitForDownloadedFileOrThrow({
+      app,
+      description: `${provider} ${exampleKind} first downloaded audio file`,
+      findDownloadedFile: () => findFirstDownloadedFile(outputRoot),
+    });
 
     expect(path.extname(firstDownloadedFile)).toBe('.mp3');
   } finally {

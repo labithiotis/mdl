@@ -6,7 +6,12 @@ import { MANIFEST_FILE_NAME } from '@mdlx/cli/lib/manifest';
 import type { SyncManifest } from '@mdlx/cli/lib/types';
 import { App } from '@mdlx/cli/ui/app';
 import { render } from 'ink-testing-library';
-import { waitFor } from './utils';
+import {
+  formatRecentFrames,
+  getLatestFrame,
+  isErrorFrame,
+  waitFor,
+} from './utils';
 
 const PLAYLIST_URL = 'https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2';
 const INPUT_PROMPT_TEXT = 'Paste a music URL and press Enter';
@@ -43,14 +48,17 @@ describe('cli-playlist-download', () => {
         'app to leave the input screen after submit'
       );
 
-      await waitFor(
-        () =>
-          app.frames.some(
-            (frame) =>
-              frame.includes('Finished') && frame.includes('Downloaded')
-          ),
-        'finished screen to render'
-      );
+      await waitFor(() => {
+        const latestFrame = getLatestFrame(app);
+
+        if (isErrorFrame(latestFrame)) {
+          throw new Error(
+            `The playlist sync exited with an error.\n\n${formatRecentFrames(app.frames)}`
+          );
+        }
+
+        return latestFrame.includes('Finished');
+      }, 'playlist sync to settle');
 
       const playlistDirs = await readdir(outputRoot, { withFileTypes: true });
       const [playlistDirEntry] = playlistDirs.filter((entry) =>
@@ -72,8 +80,14 @@ describe('cli-playlist-download', () => {
       );
 
       expect(manifest.playlistId).toBe('5GAMKM0kDTvEMk244CL9n2');
-      expect(manifest.tracks).toHaveLength(1);
-      expect(downloadedFiles).toHaveLength(1);
+      expect(
+        manifest.tracks,
+        `expected one manifest track\n\n${formatRecentFrames(app.frames)}`
+      ).toHaveLength(1);
+      expect(
+        downloadedFiles,
+        `expected one downloaded audio file\n\n${formatRecentFrames(app.frames)}`
+      ).toHaveLength(1);
       expect(manifest.tracks[0]?.fileName).toBe(downloadedFiles[0]);
 
       const fileStats = await stat(path.join(playlistDir, downloadedFiles[0]));
