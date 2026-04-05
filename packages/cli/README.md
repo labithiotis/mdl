@@ -1,15 +1,13 @@
 # mdl MusicDownLoader
 
-`mdl` is MusicDownLoader, a terminal music downloader for people who want to sync music locally.
+A terminal music downloader for people who want to sync music locally.
 
-Paste a URL, and the tool resolves music metadata, searches YouTube for matches, and downloads tracks. It stores a local sync manifest so future runs can reconcile the folder instead of starting over.
+Paste a URL, and the `mdl` resolves music metadata, searches YouTube for matches, and downloads tracks. It stores a local sync manifest so future runs can reconcile the folder instead of starting over.
 
 ![mdl](https://github.com/user-attachments/assets/796efc3b-9512-4d1c-9377-c51b89aa9437)
 
 
-## Provider support
-
-Recognized providers:
+### Providers
 
 - Spotify
 - Apple Music
@@ -21,13 +19,7 @@ Recognized providers:
 - Deezer
 - Tidal
 
-Current implementation status:
-
-- Music metadata import is attempted for every provider listed above.
-- Spotify still has the most direct/robust metadata path in the current implementation.
-- Audio downloads currently come from YouTube matches for all supported flows.
-
-## Why use it
+### Why use it
 
 - Interactive CLI
 - Links work without API keys, we query via public urls
@@ -40,22 +32,14 @@ Current implementation status:
 
 `ffmpeg` must already be installed and available on your `PATH`.
 
-
 ### NPM/BUN/PNPM
 
-### Globally
 ```bash
 npm install --global @mdlx/cli
-bun install --global @mdlx/cli
-pnpm install --global @mdlx/cli
-
 ```
-
-#### Execute directly
+or
 ```bash
 npx @mdlx/cli
-bunx @mdlx/cli
-pnpx @mdlx/cli
 ```
 
 ### Homebrew
@@ -66,7 +50,7 @@ brew tap labithiotis/homebrew-tap && brew install mdl
 
 ### Manual
 
-Download the archive for your platform from the project's Releases page, extract the binary, and move it somewhere on your `PATH`.
+Download the archive for your platform from the project's [Releases](https://github.com/labithiotis/mdl/releases) page, extract the binary, and move it somewhere on your `PATH`.
 
 ```bash
 chmod +x mdl

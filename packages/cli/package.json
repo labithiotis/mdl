@@ -10,6 +10,7 @@
     "mdl",
     "music",
     "downloader",
+    "spotdl",
     "spotify",
     "apple music",
     "amazon music",
@@ -56,6 +57,7 @@
     "ink-spinner": "5.0.0",
     "react": "19.2.0",
     "sanitize-filename": "1.6.4",
+    "undici": "5.29.0",
     "youtubei.js": "17.0.1"
   },
   "devDependencies": {

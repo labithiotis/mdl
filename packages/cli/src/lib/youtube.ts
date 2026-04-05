@@ -8,6 +8,7 @@ import sanitizeFilename from 'sanitize-filename';
 import { Innertube, Log } from 'youtubei.js';
 import type { AudioFormat, AudioQuality } from './args';
 import { ensureFfmpegExecutable } from './ffmpeg';
+import { getYouTubeSessionOptions } from './network';
 import type { PlaylistTrack } from './types';
 
 type VideoMatch = {
@@ -48,6 +49,7 @@ export type DownloadProgress = {
 
 const execFileAsync = promisify(execFile);
 const YOUTUBE_SEARCH_RESULT_COUNT = 5;
+const YOUTUBE_DOWNLOAD_CLIENTS = ['ANDROID', 'MWEB', 'WEB'] as const;
 let youtubeClientPromise: Promise<Innertube> | null = null;
 
 Log.setLevel(Log.Level.ERROR);
@@ -263,28 +265,110 @@ async function resolveAudioStream(
 ): Promise<YouTubeAudioStream> {
   const videoId = extractYouTubeVideoId(youtubeUrl);
   const client = await getYouTubeClient();
-  const selected = await client.getStreamingData(videoId, {
-    client: 'ANDROID',
-    type: 'audio',
-    format: audioFormat === 'opus' ? 'webm' : 'mp4',
-  });
-  const downloadStream = await client.download(videoId, {
-    client: 'ANDROID',
-    type: 'audio',
-    format: audioFormat === 'opus' ? 'webm' : 'mp4',
-  });
-  const mimeType = String(selected.mime_type);
-  const format = mimeType.includes('webm') ? 'webm' : 'mp4';
+  const requestedContainer = getRequestedContainer(audioFormat);
+  let lastError: unknown = null;
 
-  return {
-    contentLength:
-      typeof selected.content_length === 'number'
-        ? selected.content_length
-        : undefined,
-    format,
-    mimeType,
-    stream: downloadStream,
+  for (const requestClient of YOUTUBE_DOWNLOAD_CLIENTS) {
+    const requestOptions = {
+      client: requestClient,
+      type: 'audio' as const,
+      format: requestedContainer,
+    };
+
+    try {
+      return await resolveAudioStreamForClient({
+        client,
+        requestOptions,
+        requestedContainer,
+        videoId,
+      });
+    } catch (error) {
+      if (!isRetryableYouTubeClientError(error)) {
+        throw error;
+      }
+
+      lastError = error;
+    }
+  }
+
+  throw (
+    lastError ??
+    new Error(`Unable to resolve an audio stream for ${youtubeUrl}.`)
+  );
+}
+
+export function getRequestedContainer(
+  audioFormat: AudioFormat
+): 'mp4' | 'webm' {
+  return audioFormat === 'opus' ? 'webm' : 'mp4';
+}
+
+export function isStreamingDataUnavailableError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('Streaming data not available');
+}
+
+export function isRetryableYouTubeClientError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalizedMessage = message.toLowerCase();
+
+  return (
+    isStreamingDataUnavailableError(error) ||
+    normalizedMessage.includes('login required')
+  );
+}
+
+async function resolveAudioStreamForClient(params: {
+  client: Innertube;
+  requestOptions: {
+    client: (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number];
+    type: 'audio';
+    format: 'mp4' | 'webm';
   };
+  requestedContainer: 'mp4' | 'webm';
+  videoId: string;
+}): Promise<YouTubeAudioStream> {
+  try {
+    const selected = await params.client.getStreamingData(
+      params.videoId,
+      params.requestOptions
+    );
+    const downloadStream = await params.client.download(
+      params.videoId,
+      params.requestOptions
+    );
+    const mimeType = String(selected.mime_type);
+    const format = mimeType.includes('webm') ? 'webm' : 'mp4';
+
+    return {
+      contentLength:
+        typeof selected.content_length === 'number'
+          ? selected.content_length
+          : undefined,
+      format,
+      mimeType,
+      stream: downloadStream,
+    };
+  } catch (error) {
+    if (!isStreamingDataUnavailableError(error)) {
+      throw error;
+    }
+
+    // Some videos no longer expose decipherable streaming metadata for the
+    // chosen client, but download() can still provide a readable audio stream.
+    const downloadStream = await params.client.download(
+      params.videoId,
+      params.requestOptions
+    );
+
+    return {
+      contentLength: undefined,
+      format: params.requestedContainer,
+      mimeType:
+        params.requestedContainer === 'webm' ? 'audio/webm' : 'audio/mp4',
+      stream: downloadStream,
+    };
+  }
 }
 
 function buildFfmpegArgs(params: {
@@ -439,7 +523,7 @@ function formatBytes(value?: number): string | undefined {
 }
 
 async function getYouTubeClient(): Promise<Innertube> {
-  youtubeClientPromise ??= Innertube.create();
+  youtubeClientPromise ??= Innertube.create(getYouTubeSessionOptions());
   return youtubeClientPromise;
 }
 

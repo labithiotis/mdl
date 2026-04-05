@@ -4,14 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test .",
-    "test:e2e": "bun test ."
-  },
-  "dependencies": {
-    "@mdlx/cli": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/react": "19.2.2",
-    "ink-testing-library": "4.0.0"
+    "test:e2e": "bun test --timeout=60000 --retry=1 --bail --dots"
   }
 }

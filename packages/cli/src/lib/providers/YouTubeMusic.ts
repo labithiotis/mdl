@@ -1,4 +1,5 @@
 import { Innertube } from 'youtubei.js';
+import { getYouTubeSessionOptions } from '../network';
 import { playlistMetadataSchema } from '../schemas';
 import type { PlaylistMetadata, PlaylistTrack } from '../types';
 import { decodeUnknownSync, getFirstNonEmptyString } from '../utils';
@@ -266,7 +267,7 @@ export class YouTubeMusicProvider implements ProviderOptions {
   }
 
   private async getClient(): Promise<Innertube> {
-    this.youtubeClientPromise ??= Innertube.create();
+    this.youtubeClientPromise ??= Innertube.create(getYouTubeSessionOptions());
     return this.youtubeClientPromise;
   }
 

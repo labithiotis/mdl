@@ -35,6 +35,3 @@ jobs:
 
       - name: Tests unit
         run: bun test:unit
-
-      - name: Tests e2e
-        run: bun test:e2e

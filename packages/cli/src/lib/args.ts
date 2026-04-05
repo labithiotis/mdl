@@ -33,7 +33,11 @@ export type DownloadCliOptions = {
 export type CliOptions = DownloadCliOptions & {
   downloadParallelism: number;
   outputDir?: string;
+  proxy?: string;
+  trackCount?: number;
   url?: string;
+  ytCookie?: string;
+  ytUserAgent?: string;
 };
 
 const DEFAULT_DOWNLOAD_PARALLELISM = 10;
@@ -89,6 +93,54 @@ export function parseCliArgs(argv: string[]): CliOptions {
       continue;
     }
 
+    if (token === '--count' || token === '-c') {
+      const nextValue = argv[index + 1];
+
+      if (!nextValue) {
+        throw new Error('Missing value for --count.');
+      }
+
+      options.trackCount = parsePositiveIntegerArg(nextValue, '--count');
+      index += 1;
+      continue;
+    }
+
+    if (token === '--proxy') {
+      const nextValue = argv[index + 1];
+
+      if (!nextValue) {
+        throw new Error('Missing value for --proxy.');
+      }
+
+      options.proxy = parseProxyArg(nextValue);
+      index += 1;
+      continue;
+    }
+
+    if (token === '--yt-cookie') {
+      const nextValue = argv[index + 1];
+
+      if (!nextValue) {
+        throw new Error('Missing value for --yt-cookie.');
+      }
+
+      options.ytCookie = nextValue;
+      index += 1;
+      continue;
+    }
+
+    if (token === '--yt-user-agent') {
+      const nextValue = argv[index + 1];
+
+      if (!nextValue) {
+        throw new Error('Missing value for --yt-user-agent.');
+      }
+
+      options.ytUserAgent = nextValue;
+      index += 1;
+      continue;
+    }
+
     if (token === '--format' || token === '-f') {
       const nextValue = argv[index + 1];
 
@@ -133,13 +185,18 @@ function printHelp(): void {
 Interactive playlist and album downloader for streaming collections -> YouTube audio.
 
 Usage:
-  mdl [playlist-or-album-url] [--output <dir>] [--parallel <count>] [--format <type>]
+  mdl [playlist-or-album-url] [--output <dir>] [--parallel <count>] [--count <count>] [--format <type>] [--proxy <url>]
 
 Options:
   -o, --output       Base output directory. Playlist files are stored in a subfolder.
   -p, --parallel     Number of tracks to download in parallel. Default: ${DEFAULT_DOWNLOAD_PARALLELISM}.
+  -c, --count        Maximum number of tracks to download from the collection.
   -f, --format       Output audio format. One of: ${AUDIO_FORMATS.join(', ')}. Default: ${DEFAULT_AUDIO_FORMAT}.
   -b, --bitrate      Output audio quality. Use best, 0-10 VBR, or ${AUDIO_QUALITIES.filter((quality) => quality.endsWith('K')).join(', ')}. Default: ${DEFAULT_AUDIO_QUALITY}.
+      --proxy        HTTPS/HTTP proxy URL used for provider fetches and YouTube requests.
+      --yt-cookie    YouTube Cookie used for YouTube requests.
+      --yt-user-agent
+                     YouTube User-Agent header used for YouTube requests.
   -h, --help         Show this help message.
   -v, --version      Show the current version.
 
@@ -200,4 +257,24 @@ function normalizeAudioQualityArg(value: string): string {
   }
 
   return value;
+}
+
+function parseProxyArg(value: string): string {
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(value);
+  } catch {
+    throw new CliArgumentError({
+      message: '--proxy must be a valid http:// or https:// URL.',
+    });
+  }
+
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    throw new CliArgumentError({
+      message: '--proxy must be a valid http:// or https:// URL.',
+    });
+  }
+
+  return parsedUrl.toString();
 }

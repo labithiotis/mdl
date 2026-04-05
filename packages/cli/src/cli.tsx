@@ -5,11 +5,17 @@ import { render } from 'ink';
 import { parseCliArgs } from './lib/args';
 import { ensureFfmpegExecutable } from './lib/ffmpeg';
 import { loadManifest } from './lib/manifest';
+import { configureNetwork } from './lib/network';
 import { App } from './ui/app';
 
 await ensureFfmpegExecutable();
 
 const args = parseCliArgs(process.argv.slice(2));
+configureNetwork({
+  proxy: args.proxy,
+  ytCookie: args.ytCookie,
+  ytUserAgent: args.ytUserAgent,
+});
 const dir = path.resolve(
   process.env.INIT_CWD ?? process.env.PWD ?? process.cwd()
 );
@@ -24,5 +30,6 @@ render(
     audioFormat={args.audioFormat}
     audioQuality={args.audioQuality}
     downloadParallelism={args.downloadParallelism}
+    trackCount={args.trackCount}
   />
 );
