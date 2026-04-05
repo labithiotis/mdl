@@ -263,28 +263,55 @@ async function resolveAudioStream(
 ): Promise<YouTubeAudioStream> {
   const videoId = extractYouTubeVideoId(youtubeUrl);
   const client = await getYouTubeClient();
-  const selected = await client.getStreamingData(videoId, {
-    client: 'ANDROID',
-    type: 'audio',
-    format: audioFormat === 'opus' ? 'webm' : 'mp4',
-  });
-  const downloadStream = await client.download(videoId, {
-    client: 'ANDROID',
-    type: 'audio',
-    format: audioFormat === 'opus' ? 'webm' : 'mp4',
-  });
-  const mimeType = String(selected.mime_type);
-  const format = mimeType.includes('webm') ? 'webm' : 'mp4';
-
-  return {
-    contentLength:
-      typeof selected.content_length === 'number'
-        ? selected.content_length
-        : undefined,
-    format,
-    mimeType,
-    stream: downloadStream,
+  const requestedContainer = getRequestedContainer(audioFormat);
+  const requestOptions = {
+    client: 'ANDROID' as const,
+    type: 'audio' as const,
+    format: requestedContainer,
   };
+
+  try {
+    const selected = await client.getStreamingData(videoId, requestOptions);
+    const downloadStream = await client.download(videoId, requestOptions);
+    const mimeType = String(selected.mime_type);
+    const format = mimeType.includes('webm') ? 'webm' : 'mp4';
+
+    return {
+      contentLength:
+        typeof selected.content_length === 'number'
+          ? selected.content_length
+          : undefined,
+      format,
+      mimeType,
+      stream: downloadStream,
+    };
+  } catch (error) {
+    if (!isStreamingDataUnavailableError(error)) {
+      throw error;
+    }
+
+    // Some videos no longer expose decipherable streaming metadata for the
+    // chosen client, but download() can still provide a readable audio stream.
+    const downloadStream = await client.download(videoId, requestOptions);
+
+    return {
+      contentLength: undefined,
+      format: requestedContainer,
+      mimeType: requestedContainer === 'webm' ? 'audio/webm' : 'audio/mp4',
+      stream: downloadStream,
+    };
+  }
+}
+
+export function getRequestedContainer(
+  audioFormat: AudioFormat
+): 'mp4' | 'webm' {
+  return audioFormat === 'opus' ? 'webm' : 'mp4';
+}
+
+export function isStreamingDataUnavailableError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('Streaming data not available');
 }
 
 function buildFfmpegArgs(params: {
