@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit -p packages/cli/tsconfig.json",
     "test": "bun run --filter '@mdl/*' --parallel test",
     "test:unit": "bun run --filter '@mdlx/cli' test:unit",
-    "test:e2e": "bun run --filter '@mdl/e2e' test"
+    "test:e2e": "bun run --filter '@mdl/e2e' test:e2e"
   },
   "knip": {
     "workspaces": {

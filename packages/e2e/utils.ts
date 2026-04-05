@@ -1,114 +1,76 @@
-type RenderedApp = {
-  frames: string[];
-  lastFrame: () => string | undefined;
-};
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const DEFAULT_TIMEOUT_MS = process.env.CI ? 90_000 : 240_000;
+const CLI_TIMEOUT_MS = 60_000;
+const CLI_ENTRY_PATH = fileURLToPath(
+  new URL('../cli/src/cli.tsx', import.meta.url)
+);
 
-export async function waitFor(
-  predicate: () => boolean | Promise<boolean>,
-  description: string,
-  timeoutMs = DEFAULT_TIMEOUT_MS
-): Promise<void> {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    if (await predicate()) {
-      return;
-    }
-
-    await sleep(250);
+export async function runCli(
+  args: string[],
+  options?: {
+    cwd?: string;
+    env?: Record<string, string | undefined>;
   }
+): Promise<{
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  combinedOutput: string;
+}> {
+  const cwd =
+    options?.cwd ?? path.resolve(path.dirname(CLI_ENTRY_PATH), '../../..');
+  const child = spawn(process.execPath, ['run', CLI_ENTRY_PATH, ...args], {
+    cwd,
+    env: {
+      ...process.env,
+      ...options?.env,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
-  throw new Error(`Timed out waiting for ${description}.`);
+  let stdout = '';
+  let stderr = '';
+
+  child.stdout.on('data', (chunk) => {
+    const output = chunk.toString();
+    stdout += output;
+  });
+
+  child.stderr.on('data', (chunk) => {
+    const output = chunk.toString();
+    stderr += output;
+  });
+
+  const exitCode = await waitForProcessExit(child, CLI_TIMEOUT_MS);
+
+  return {
+    exitCode,
+    stdout,
+    stderr,
+    combinedOutput: [stdout, stderr].filter(Boolean).join('\n'),
+  };
 }
 
-export async function waitForValue<T>(
-  getter: () => T | null | Promise<T | null>,
-  description: string,
-  timeoutMs = DEFAULT_TIMEOUT_MS
-): Promise<T> {
-  const startedAt = Date.now();
+async function waitForProcessExit(
+  child: ReturnType<typeof spawn>,
+  timeoutMs?: number
+): Promise<number | null> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error(`Timed out waiting for CLI process to exit.`));
+    }, timeoutMs ?? CLI_TIMEOUT_MS);
 
-  while (Date.now() - startedAt < timeoutMs) {
-    const value = await getter();
-    if (value !== null) {
-      return value;
-    }
+    child.once('error', (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
 
-    await sleep(250);
-  }
-
-  throw new Error(`Timed out waiting for ${description}.`);
-}
-
-export async function waitForDownloadedFileOrThrow(params: {
-  app: RenderedApp;
-  description: string;
-  findDownloadedFile: () => Promise<string | null>;
-  timeoutMs?: number;
-}): Promise<string> {
-  const timeoutMs = params.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    const downloadedFile = await params.findDownloadedFile();
-
-    if (downloadedFile) {
-      return downloadedFile;
-    }
-
-    const latestFrame = getLatestFrame(params.app);
-
-    if (isErrorFrame(latestFrame)) {
-      throw new Error(
-        `The app exited with an error while waiting for ${params.description}.\n\n${formatRecentFrames(params.app.frames)}`
-      );
-    }
-
-    if (isFinishedFrame(latestFrame)) {
-      throw new Error(
-        `The app finished before ${params.description} was created.\n\n${formatRecentFrames(params.app.frames)}`
-      );
-    }
-
-    await sleep(250);
-  }
-
-  throw new Error(
-    `Timed out waiting for ${params.description}.\n\n${formatRecentFrames(params.app.frames)}`
-  );
-}
-
-export function getLatestFrame(app: RenderedApp): string {
-  return app.lastFrame() ?? app.frames.at(-1) ?? '(no app output captured)';
-}
-
-export function isFinishedFrame(frame: string): boolean {
-  return frame.includes('Finished');
-}
-
-export function isErrorFrame(frame: string): boolean {
-  return (
-    frame.includes('Error') && frame.includes('The process will exit shortly.')
-  );
-}
-
-export function formatRecentFrames(
-  frames: string[],
-  recentFrameCount = 3
-): string {
-  const recentFrames = frames.slice(-recentFrameCount);
-
-  if (recentFrames.length === 0) {
-    return 'Recent output:\n(no app output captured)';
-  }
-
-  return `Recent output:\n${recentFrames.join('\n\n---\n\n')}`;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+    child.once('close', (code) => {
+      clearTimeout(timeout);
+      resolve(code);
+    });
   });
 }

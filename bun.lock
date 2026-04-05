@@ -35,13 +35,9 @@
     "packages/e2e": {
       "name": "@mdl/e2e",
       "version": "0.0.0",
-      "dependencies": {
-        "@mdlx/cli": "workspace:*",
-      },
+      "dependencies": {},
       "devDependencies": {
-        "react": "19.2.0",
-        "@types/react": "19.2.2",
-        "ink-testing-library": "4.0.0",
+        "@types/bun": "latest",
       },
     },
     "packages/web": {

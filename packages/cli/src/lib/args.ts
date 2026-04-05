@@ -33,6 +33,7 @@ export type DownloadCliOptions = {
 export type CliOptions = DownloadCliOptions & {
   downloadParallelism: number;
   outputDir?: string;
+  trackCount?: number;
   url?: string;
 };
 
@@ -89,6 +90,18 @@ export function parseCliArgs(argv: string[]): CliOptions {
       continue;
     }
 
+    if (token === '--count' || token === '-c') {
+      const nextValue = argv[index + 1];
+
+      if (!nextValue) {
+        throw new Error('Missing value for --count.');
+      }
+
+      options.trackCount = parsePositiveIntegerArg(nextValue, '--count');
+      index += 1;
+      continue;
+    }
+
     if (token === '--format' || token === '-f') {
       const nextValue = argv[index + 1];
 
@@ -133,11 +146,12 @@ function printHelp(): void {
 Interactive playlist and album downloader for streaming collections -> YouTube audio.
 
 Usage:
-  mdl [playlist-or-album-url] [--output <dir>] [--parallel <count>] [--format <type>]
+  mdl [playlist-or-album-url] [--output <dir>] [--parallel <count>] [--count <count>] [--format <type>]
 
 Options:
   -o, --output       Base output directory. Playlist files are stored in a subfolder.
   -p, --parallel     Number of tracks to download in parallel. Default: ${DEFAULT_DOWNLOAD_PARALLELISM}.
+  -c, --count        Maximum number of tracks to download from the collection.
   -f, --format       Output audio format. One of: ${AUDIO_FORMATS.join(', ')}. Default: ${DEFAULT_AUDIO_FORMAT}.
   -b, --bitrate      Output audio quality. Use best, 0-10 VBR, or ${AUDIO_QUALITIES.filter((quality) => quality.endsWith('K')).join(', ')}. Default: ${DEFAULT_AUDIO_QUALITY}.
   -h, --help         Show this help message.

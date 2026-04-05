@@ -2,23 +2,26 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { Provider } from '@mdlx/cli/lib/types';
-import { App } from '@mdlx/cli/ui/app';
-import { render } from 'ink-testing-library';
-import {
-  formatRecentFrames,
-  getLatestFrame,
-  isErrorFrame,
-  waitFor,
-  waitForDownloadedFileOrThrow,
-} from './utils';
+import { runCli } from './utils';
+
+const PROVIDER_TEST_TIMEOUT_MS = 60_000;
+
+type Provider =
+  | 'spotify'
+  | 'apple-music'
+  | 'amazon-music'
+  | 'soundcloud'
+  | 'bandcamp'
+  | 'deezer'
+  | 'qobuz'
+  | 'tidal'
+  | 'youtube-music';
 
 const ALBUM_EXAMPLES: Record<Provider, string> = {
   spotify: 'https://open.spotify.com/album/6eUW0wxWtzkFdaEFsTJto6',
   'apple-music':
     'https://music.apple.com/us/album/the-boys-of-dungeon-lane/1887402919',
   'amazon-music': 'https://music.amazon.com/albums/B0FQCR86CK',
-  // SoundCloud does not expose a public album page, so keep a collection URL here.
   soundcloud:
     'https://soundcloud.com/soundcloud-amped/sets/the-dive-new-rock-now',
   bandcamp: 'https://marcellaandherlovers.bandcamp.com/album/live-from-memphis',
@@ -45,15 +48,23 @@ const TRACK_EXAMPLES: Record<Provider, string> = {
 
 describe('cli-provider-smoke', () => {
   for (const [provider, url] of Object.entries(ALBUM_EXAMPLES)) {
-    test(`downloads the first track from the album for ${provider}`, async () => {
-      await runProviderSmokeTest(provider, url, 'album');
-    }, 300_000);
+    test(
+      `downloads audio for album url from ${provider}`,
+      async () => {
+        await runProviderSmokeTest(provider, url, 'album');
+      },
+      PROVIDER_TEST_TIMEOUT_MS
+    );
   }
 
   for (const [provider, url] of Object.entries(TRACK_EXAMPLES)) {
-    test(`downloads the track for ${provider}`, async () => {
-      await runProviderSmokeTest(provider, url, 'track');
-    }, 300_000);
+    test(
+      `downloads audio for track url from ${provider}`,
+      async () => {
+        await runProviderSmokeTest(provider, url, 'track');
+      },
+      PROVIDER_TEST_TIMEOUT_MS
+    );
   }
 });
 
@@ -65,40 +76,33 @@ async function runProviderSmokeTest(
   const outputRoot = await mkdtemp(
     path.join(os.tmpdir(), `mdl-e2e-${provider}-`)
   );
-  const app = render(
-    <App
-      audioFormat="mp3"
-      audioQuality="best"
-      downloadParallelism={1}
-      outputDir={outputRoot}
-      initialUrl={url}
-    />
-  );
 
   try {
-    await waitFor(() => {
-      const latestFrame = getLatestFrame(app);
+    const cliResult = await runCli([
+      '--output',
+      outputRoot,
+      '--parallel',
+      '1',
+      '--count',
+      '1',
+      '--format',
+      'mp3',
+      url,
+    ]);
 
-      if (isErrorFrame(latestFrame)) {
-        throw new Error(
-          `The app exited before rendering the sync screen for ${provider} ${exampleKind}.\n\n${formatRecentFrames(app.frames)}`
-        );
-      }
+    expect(
+      cliResult.exitCode,
+      `${provider} ${exampleKind} CLI run failed\n\n${cliResult.combinedOutput}`
+    ).toBe(0);
 
-      return (
-        hasAnyFrame(app.frames, 'Playlist') && hasAnyFrame(app.frames, 'Tracks')
-      );
-    }, `${provider} ${exampleKind} sync screen`);
+    const firstDownloadedFile = await findFirstDownloadedFile(outputRoot);
 
-    const firstDownloadedFile = await waitForDownloadedFileOrThrow({
-      app,
-      description: `${provider} ${exampleKind} first downloaded audio file`,
-      findDownloadedFile: () => findFirstDownloadedFile(outputRoot),
-    });
-
-    expect(path.extname(firstDownloadedFile)).toBe('.mp3');
+    expect(
+      firstDownloadedFile,
+      `${provider} ${exampleKind} did not produce an mp3 file\n\n${cliResult.combinedOutput}`
+    ).toBeTruthy();
+    expect(path.extname(firstDownloadedFile ?? '')).toBe('.mp3');
   } finally {
-    app.unmount();
     await rm(outputRoot, { recursive: true, force: true });
   }
 }
@@ -127,7 +131,10 @@ async function findFirstMatchingFile(
 
     if (entry.isDirectory()) {
       const nestedMatch = await findFirstMatchingFile(entryPath, isMatch);
-      if (nestedMatch) return nestedMatch;
+      if (nestedMatch) {
+        return nestedMatch;
+      }
+
       continue;
     }
 
@@ -137,8 +144,4 @@ async function findFirstMatchingFile(
   }
 
   return null;
-}
-
-function hasAnyFrame(frames: string[], text: string): boolean {
-  return frames.some((frame) => frame.includes(text));
 }

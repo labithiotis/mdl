@@ -20,6 +20,8 @@ describe('args', () => {
         'https://open.spotify.com/playlist/example',
         '--parallel',
         '7',
+        '--count',
+        '3',
         '--output',
         './music',
       ])
@@ -27,6 +29,7 @@ describe('args', () => {
       audioFormat: 'mp3',
       audioQuality: 'best',
       downloadParallelism: 7,
+      trackCount: 3,
       outputDir: './music',
       url: 'https://open.spotify.com/playlist/example',
     });
@@ -50,5 +53,11 @@ describe('args', () => {
     expect(() => {
       parseCliArgs(['--parallel', '0']);
     }).toThrow('--parallel must be a positive integer.');
+  });
+
+  test('parseCliArgs rejects non-positive count values', () => {
+    expect(() => {
+      parseCliArgs(['--count', '0']);
+    }).toThrow('--count must be a positive integer.');
   });
 });

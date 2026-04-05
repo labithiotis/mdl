@@ -4,15 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test --bail=1 .",
-    "test:e2e": "bun test --bail=1 ."
-  },
-  "dependencies": {
-    "@mdlx/cli": "workspace:*"
+    "test:e2e": "bun test --bail=1 --concurrent ."
   },
   "devDependencies": {
-    "react": "19.2.0",
-    "@types/react": "19.2.2",
-    "ink-testing-library": "4.0.0"
+    "@types/bun": "latest"
   }
 }

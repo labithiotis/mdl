@@ -24,5 +24,6 @@ render(
     audioFormat={args.audioFormat}
     audioQuality={args.audioQuality}
     downloadParallelism={args.downloadParallelism}
+    trackCount={args.trackCount}
   />
 );

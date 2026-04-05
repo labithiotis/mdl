@@ -7,7 +7,7 @@ import {
   validateProviderUrl,
 } from '../lib/providers/Providers';
 import { syncPlaylist } from '../lib/sync';
-import type { SyncManifest } from '../lib/types';
+import type { PlaylistMetadata, SyncManifest } from '../lib/types';
 import { Hero } from './components/Hero';
 import { DoneScreen } from './DoneScreen';
 import { ErrorScreen } from './ErrorScreen';
@@ -25,6 +25,7 @@ type AppProps = {
   outputDir: string;
   initialUrl?: string;
   manifest?: SyncManifest | null;
+  trackCount?: number;
 };
 
 export function App({
@@ -34,6 +35,7 @@ export function App({
   outputDir,
   initialUrl,
   manifest,
+  trackCount,
 }: AppProps) {
   const { exit } = useApp();
   const loadingPhaseRef = useRef<Extract<
@@ -102,9 +104,12 @@ export function App({
           isResync: phase.isResync,
           message: `Fetching ${formatProviderName(validated.provider)} collection metadata`,
         });
-        const playlist = await providers[validated.provider].fetch(
-          validated.normalizedUrl,
-          {}
+        const playlist = applyTrackCountLimit(
+          await providers[validated.provider].fetch(
+            validated.normalizedUrl,
+            {}
+          ),
+          trackCount
         );
         if (!isActive) return;
 
@@ -127,7 +132,7 @@ export function App({
     return () => {
       isActive = false;
     };
-  }, [downloadParallelism, loadingRequestKey]);
+  }, [downloadParallelism, loadingRequestKey, trackCount]);
 
   useEffect(() => {
     if (!syncRequestKey) return;
@@ -188,6 +193,7 @@ export function App({
     }
 
     const timeout = setTimeout(() => {
+      process.exitCode = state.phase.kind === 'error' ? 1 : 0;
       exit();
     }, 1800);
 
@@ -256,4 +262,18 @@ export function App({
       ) : null}
     </Box>
   );
+}
+
+function applyTrackCountLimit(
+  playlist: PlaylistMetadata,
+  trackCount?: number
+): PlaylistMetadata {
+  if (!trackCount || playlist.tracks.length <= trackCount) {
+    return playlist;
+  }
+
+  return {
+    ...playlist,
+    tracks: playlist.tracks.slice(0, trackCount),
+  };
 }
