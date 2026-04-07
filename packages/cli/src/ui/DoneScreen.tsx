@@ -43,9 +43,11 @@ export function DoneScreen(props: DoneScreenProps) {
           />
           <Metric label="Tracks" tone="cyan" value={String(finalTrackTotal)} />
         </Box>
-        <Text color="gray" italic underline>
-          {props.summary.playlistDir}
-        </Text>
+        <Box marginTop={1}>
+          <Text color="gray" italic underline>
+            {props.summary.playlistDir}
+          </Text>
+        </Box>
       </Panel>
 
       <Panel title="Tracks" borderColor="green" titleColor="green">
