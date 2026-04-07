@@ -87,4 +87,47 @@ describe('args', () => {
       parseCliArgs(['--proxy', 'socks5://localhost:1080']);
     }).toThrow('--proxy must be a valid http:// or https:// URL.');
   });
+
+  test('parseCliArgs prints help and exits', () => {
+    const stdoutWrite = mock(() => true);
+    const exitMock = mock((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    });
+
+    process.stdout.write = stdoutWrite as typeof process.stdout.write;
+    process.exit = exitMock as typeof process.exit;
+
+    expect(() => {
+      parseCliArgs(['--help']);
+    }).toThrow('exit:0');
+    expect(stdoutWrite).toHaveBeenCalled();
+  });
+
+  test('parseCliArgs prints version and exits', () => {
+    const stdoutWrite = mock(() => true);
+    const exitMock = mock((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    });
+
+    process.stdout.write = stdoutWrite as typeof process.stdout.write;
+    process.exit = exitMock as typeof process.exit;
+
+    expect(() => {
+      parseCliArgs(['--version']);
+    }).toThrow('exit:0');
+    expect(stdoutWrite).toHaveBeenCalledWith(
+      expect.stringMatching(/\d+\.\d+\.\d+/)
+    );
+  });
+
+  test('parseCliArgs rejects unexpected arguments', () => {
+    expect(() => {
+      parseCliArgs([
+        'https://open.spotify.com/playlist/example',
+        'unexpected-token',
+      ]);
+    }).toThrow(
+      'Unexpected argument "unexpected-token". Please use one of these:'
+    );
+  });
 });

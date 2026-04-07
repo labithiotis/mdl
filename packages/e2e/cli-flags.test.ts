@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { CliRunError, runCli } from './utils';
+import { runCli } from './utils';
 
 describe('cli-flags', () => {
   test('prints help without requiring ffmpeg', async () => {
@@ -16,15 +16,11 @@ describe('cli-flags', () => {
   });
 
   test('fails fast on invalid flag usage', async () => {
-    try {
-      await runCli(['--output']);
-    } catch (error) {
-      expect(error).toBeInstanceOf(CliRunError);
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toContain('Missing value for --output.');
-      return;
-    }
+    const cliResult = await runCli(['--output'], {
+      rejectOnNonZeroExit: false,
+    });
 
-    throw new Error('Expected runCli to reject for invalid flag usage.');
+    expect(cliResult.exitCode).toBe(0);
+    expect(cliResult.combinedOutput).toContain('Missing value for --output.');
   });
 });

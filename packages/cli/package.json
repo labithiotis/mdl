@@ -51,6 +51,7 @@
     "test:unit": "bun test src"
   },
   "dependencies": {
+    "commander": "14.0.1",
     "effect": "3.21.0",
     "ink": "6.8.0",
     "ink-scroll-view": "0.3.6",

@@ -1,5 +1,7 @@
+import { Command, CommanderError, Option } from 'commander';
 import { Either, Schema } from 'effect';
 import packageJson from '../../package.json' with { type: 'json' };
+import { PROVIDERS } from './schemas';
 import { CliArgumentError, decodeUnknownEither } from './utils';
 
 export const AUDIO_FORMATS = ['mp3', 'm4a', 'opus', 'flac', 'wav'] as const;
@@ -40,6 +42,17 @@ export type CliOptions = DownloadCliOptions & {
   ytUserAgent?: string;
 };
 
+type ParsedCommanderOptions = {
+  bitrate: AudioQuality;
+  count?: number;
+  format: AudioFormat;
+  output?: string;
+  parallel: number;
+  proxy?: string;
+  ytCookie?: string;
+  ytUserAgent?: string;
+};
+
 const DEFAULT_DOWNLOAD_PARALLELISM = 10;
 const DEFAULT_AUDIO_FORMAT: AudioFormat = 'mp3';
 const DEFAULT_AUDIO_QUALITY: AudioQuality = 'best';
@@ -47,167 +60,119 @@ const audioFormatSchema = Schema.Literal(...AUDIO_FORMATS);
 const audioQualitySchema = Schema.Literal(...AUDIO_QUALITIES);
 
 export function parseCliArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    audioFormat: DEFAULT_AUDIO_FORMAT,
-    audioQuality: DEFAULT_AUDIO_QUALITY,
-    downloadParallelism: DEFAULT_DOWNLOAD_PARALLELISM,
-  };
+  const program = createCliProgram();
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-
-    if (token === '--help' || token === '-h') {
-      printHelp();
-      process.exit(0);
-    }
-
-    if (token === '--version' || token === '-v') {
-      printVersion();
-      process.exit(0);
-    }
-
-    if (token === '--output' || token === '-o') {
-      const nextValue = argv[index + 1];
-
-      if (!nextValue) {
-        throw new Error('Missing value for --output.');
+  try {
+    program.parse(argv, { from: 'user' });
+  } catch (error) {
+    if (error instanceof CommanderError) {
+      if (
+        error.code === 'commander.helpDisplayed' ||
+        error.code === 'commander.version'
+      ) {
+        process.exit(0);
       }
 
-      options.outputDir = nextValue;
-      index += 1;
-      continue;
+      throw normalizeCommanderError(program, error, argv);
     }
 
-    if (token === '--parallel' || token === '-p') {
-      const nextValue = argv[index + 1];
-
-      if (!nextValue) {
-        throw new Error('Missing value for --parallel.');
-      }
-
-      options.downloadParallelism = parsePositiveIntegerArg(
-        nextValue,
-        '--parallel'
-      );
-      index += 1;
-      continue;
-    }
-
-    if (token === '--count' || token === '-c') {
-      const nextValue = argv[index + 1];
-
-      if (!nextValue) {
-        throw new Error('Missing value for --count.');
-      }
-
-      options.trackCount = parsePositiveIntegerArg(nextValue, '--count');
-      index += 1;
-      continue;
-    }
-
-    if (token === '--proxy') {
-      const nextValue = argv[index + 1];
-
-      if (!nextValue) {
-        throw new Error('Missing value for --proxy.');
-      }
-
-      options.proxy = parseProxyArg(nextValue);
-      index += 1;
-      continue;
-    }
-
-    if (token === '--yt-cookie') {
-      const nextValue = argv[index + 1];
-
-      if (!nextValue) {
-        throw new Error('Missing value for --yt-cookie.');
-      }
-
-      options.ytCookie = nextValue;
-      index += 1;
-      continue;
-    }
-
-    if (token === '--yt-user-agent') {
-      const nextValue = argv[index + 1];
-
-      if (!nextValue) {
-        throw new Error('Missing value for --yt-user-agent.');
-      }
-
-      options.ytUserAgent = nextValue;
-      index += 1;
-      continue;
-    }
-
-    if (token === '--format' || token === '-f') {
-      const nextValue = argv[index + 1];
-
-      if (!nextValue) {
-        throw new Error('Missing value for --format.');
-      }
-
-      options.audioFormat = parseAudioFormatArg(nextValue, '--format');
-      index += 1;
-      continue;
-    }
-
-    if (token === '--bitrate' || token === '-b') {
-      const nextValue = argv[index + 1];
-
-      if (!nextValue) {
-        throw new Error('Missing value for --bitrate.');
-      }
-
-      options.audioQuality = parseAudioQualityArg(
-        normalizeAudioQualityArg(nextValue),
-        '--bitrate'
-      );
-      index += 1;
-      continue;
-    }
-
-    if (!options.url) {
-      options.url = token;
-      continue;
-    }
-
-    throw new Error(`Unexpected argument: ${token}`);
+    throw error;
   }
 
-  return options;
+  const options = program.opts<ParsedCommanderOptions>();
+  const [url] = program.processedArgs as Array<string | undefined>;
+
+  return {
+    audioFormat: options.format,
+    audioQuality: options.bitrate,
+    downloadParallelism: options.parallel,
+    ...(options.output ? { outputDir: options.output } : {}),
+    ...(options.proxy ? { proxy: options.proxy } : {}),
+    ...(typeof options.count === 'number' ? { trackCount: options.count } : {}),
+    ...(url ? { url } : {}),
+    ...(options.ytCookie ? { ytCookie: options.ytCookie } : {}),
+    ...(options.ytUserAgent ? { ytUserAgent: options.ytUserAgent } : {}),
+  };
 }
 
-function printHelp(): void {
-  process.stdout.write(`mdl (MusicDownLoader)
-
-Interactive playlist and album downloader for streaming collections -> YouTube audio.
-
-Usage:
-  mdl [playlist-or-album-url] [--output <dir>] [--parallel <count>] [--count <count>] [--format <type>] [--proxy <url>]
-
-Options:
-  -o, --output       Base output directory. Playlist files are stored in a subfolder.
-  -p, --parallel     Number of tracks to download in parallel. Default: ${DEFAULT_DOWNLOAD_PARALLELISM}.
-  -c, --count        Maximum number of tracks to download from the collection.
-  -f, --format       Output audio format. One of: ${AUDIO_FORMATS.join(', ')}. Default: ${DEFAULT_AUDIO_FORMAT}.
-  -b, --bitrate      Output audio quality. Use best, 0-10 VBR, or ${AUDIO_QUALITIES.filter((quality) => quality.endsWith('K')).join(', ')}. Default: ${DEFAULT_AUDIO_QUALITY}.
-      --proxy        HTTPS/HTTP proxy URL used for provider fetches and YouTube requests.
-      --yt-cookie    YouTube Cookie used for YouTube requests.
-      --yt-user-agent
-                     YouTube User-Agent header used for YouTube requests.
-  -h, --help         Show this help message.
-  -v, --version      Show the current version.
-
-Providers:
-  Spotify, Apple Music, Amazon Music, YouTube Music, SoundCloud, Bandcamp, Qobuz, Deezer, and Tidal.
-  Audio downloads currently come from YouTube.
-`);
-}
-
-function printVersion(): void {
-  process.stdout.write(`${packageJson.version}\n`);
+function createCliProgram(): Command {
+  return new Command()
+    .name('mdl')
+    .description(
+      'Interactive playlist and album downloader for streaming collections -> YouTube audio.'
+    )
+    .usage('[playlist-or-album-url] [options]')
+    .helpOption('-h, --help', 'Show this help message.')
+    .version(packageJson.version, '-v, --version', 'Show the current version.')
+    .argument('[playlist-or-album-url]', 'Playlist or album URL.')
+    .addOption(
+      new Option(
+        '-o, --output <dir>',
+        'Base output directory. Playlist files are stored in a subfolder.'
+      )
+    )
+    .addOption(
+      new Option(
+        '-p, --parallel <count>',
+        `Number of tracks to download in parallel. Default: ${DEFAULT_DOWNLOAD_PARALLELISM}.`
+      )
+        .default(DEFAULT_DOWNLOAD_PARALLELISM)
+        .argParser((value: string) =>
+          parsePositiveIntegerArg(value, '--parallel')
+        )
+    )
+    .addOption(
+      new Option(
+        '-c, --count <count>',
+        'Maximum number of tracks to download from the collection.'
+      ).argParser((value: string) => parsePositiveIntegerArg(value, '--count'))
+    )
+    .addOption(
+      new Option(
+        '-f, --format <type>',
+        `Output audio format. One of: ${AUDIO_FORMATS.join(', ')}. Default: ${DEFAULT_AUDIO_FORMAT}.`
+      )
+        .default(DEFAULT_AUDIO_FORMAT)
+        .argParser((value: string) => parseAudioFormatArg(value, '--format'))
+    )
+    .addOption(
+      new Option(
+        '-b, --bitrate <quality>',
+        `Output audio quality. Use best, 0-10 VBR, or ${AUDIO_QUALITIES.filter((quality) => quality.endsWith('K')).join(', ')}. Default: ${DEFAULT_AUDIO_QUALITY}.`
+      )
+        .default(DEFAULT_AUDIO_QUALITY)
+        .argParser((value: string) =>
+          parseAudioQualityArg(normalizeAudioQualityArg(value), '--bitrate')
+        )
+    )
+    .addOption(
+      new Option(
+        '--proxy <url>',
+        'HTTPS/HTTP proxy URL used for provider fetches and YouTube requests.'
+      ).argParser((value: string) => parseProxyArg(value))
+    )
+    .addOption(
+      new Option(
+        '--yt-cookie <cookie>',
+        'YouTube Cookie used for YouTube requests.'
+      )
+    )
+    .addOption(
+      new Option(
+        '--yt-user-agent <value>',
+        'YouTube User-Agent header used for YouTube requests.'
+      )
+    )
+    .addHelpText('before', 'mdl (MusicDownLoader)\n\n')
+    .addHelpText(
+      'after',
+      `\nProviders:\n  ${PROVIDERS.join(', ')}.\n  Audio downloads currently come from YouTube.\n`
+    )
+    .exitOverride()
+    .configureOutput({
+      writeOut: (str: string) => process.stdout.write(str),
+      writeErr: () => undefined,
+    });
 }
 
 function parsePositiveIntegerArg(value: string, flagName: string): number {
@@ -239,6 +204,60 @@ function parseAudioFormatArg(value: string, flagName: string): AudioFormat {
   });
 }
 
+function normalizeCommanderError(
+  program: Command,
+  error: CommanderError,
+  argv: string[]
+): Error {
+  if (error.code === 'commander.excessArguments') {
+    const positionalArgs = argv.filter((token) => !token.startsWith('-'));
+    const unexpectedArg = positionalArgs[1];
+    return new CliArgumentError({
+      message: formatUnexpectedArgumentMessage(
+        program,
+        unexpectedArg ?? error.message
+      ),
+    });
+  }
+
+  if (error.code === 'commander.unknownOption') {
+    const unexpectedToken = argv.find((token) => token.startsWith('-'));
+    return new CliArgumentError({
+      message: formatUnexpectedArgumentMessage(
+        program,
+        unexpectedToken ?? error.message
+      ),
+    });
+  }
+
+  if (error.code === 'commander.invalidArgument') {
+    return new CliArgumentError({
+      message: error.message.replace(/^error: /, ''),
+    });
+  }
+
+  if (error.code === 'commander.optionMissingArgument') {
+    const matchedFlags = error.message.match(
+      /option '([^']+)' argument missing/
+    );
+    const normalizedFlag =
+      matchedFlags?.[1]
+        ?.split(',')
+        .map((value) => value.trim().split(' ')[0])
+        .find((value) => value.startsWith('--')) ??
+      matchedFlags?.[1]
+        ?.split(',')
+        .map((value) => value.trim().split(' ')[0])[0] ??
+      '--option';
+
+    return new CliArgumentError({
+      message: `Missing value for ${normalizedFlag}.`,
+    });
+  }
+
+  return new Error(error.message.replace(/^error: /, ''));
+}
+
 function parseAudioQualityArg(value: string, flagName: string): AudioQuality {
   const result = decodeUnknownEither(audioQualitySchema, value);
 
@@ -249,6 +268,23 @@ function parseAudioQualityArg(value: string, flagName: string): AudioQuality {
   throw new CliArgumentError({
     message: `${flagName} must be one of: ${AUDIO_QUALITIES.join(', ')}.`,
   });
+}
+
+function formatUnexpectedArgumentMessage(
+  program: Command,
+  argument: string
+): string {
+  const help = program.createHelp();
+  const supportedArgs = [
+    ...program.registeredArguments.map((registeredArgument) =>
+      help.argumentTerm(registeredArgument)
+    ),
+    ...help.visibleOptions(program).map((option) => help.optionTerm(option)),
+  ]
+    .map((value) => `  ${value}`)
+    .join('\n');
+
+  return `Unexpected argument "${argument}". Please use one of these:\n${supportedArgs}`;
 }
 
 function normalizeAudioQualityArg(value: string): string {

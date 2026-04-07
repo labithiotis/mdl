@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-export const providerSchema = Schema.Literal(
+export const PROVIDERS = [
   'spotify',
   'apple-music',
   'amazon-music',
@@ -9,8 +9,10 @@ export const providerSchema = Schema.Literal(
   'bandcamp',
   'qobuz',
   'deezer',
-  'tidal'
-);
+  'tidal',
+] as const;
+
+export const providerSchema = Schema.Literal(...PROVIDERS);
 
 export const playlistTrackSchema = Schema.Struct({
   id: Schema.String,
