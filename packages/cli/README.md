@@ -19,44 +19,13 @@ Paste a URL, and the `mdl` resolves music metadata, searches YouTube for matches
 - Deezer
 - Tidal
 
-### Why use it
+### How it works
 
-- Interactive CLI
-- Links work without API keys, we query via public urls
+- All providers work without API keys, we query via public urls
 - Downloads are grouped into a music name directory
 - A `.mdl.json` manifest is written next to the files for resyncs
 - Metadata is resolved directly from the music URL
-- Audio is currently sourced from YouTube
-
-## Install
-
-`ffmpeg` must already be installed and available on your `PATH`.
-
-### NPM/BUN/PNPM
-
-```bash
-npm install --global @mdlx/cli
-```
-or
-```bash
-npx @mdlx/cli
-```
-
-### Homebrew
-
-```bash
-brew tap labithiotis/homebrew-tap && brew install mdl
-```
-
-### Manual
-
-Download the archive for your platform from the project's [Releases](https://github.com/labithiotis/mdl/releases) page, extract the binary, and move it somewhere on your `PATH`.
-
-```bash
-chmod +x mdl
-mv mdl /usr/local/bin/mdl
-mdl --help
-```
+- Audio is sourced from YouTube
 
 ## Usage
 
@@ -93,5 +62,35 @@ mdl "https://open.spotify.com/playlist/..." --format m4a --bitrate 192K
 CLI help:
 
 ```bash
+mdl --help
+```
+
+## Install
+
+`ffmpeg` must already be installed and available on your `PATH`.
+
+### NPM/BUN/PNPM
+
+```bash
+npm install --global @mdlx/cli
+```
+or
+```bash
+npx @mdlx/cli
+```
+
+### Homebrew
+
+```bash
+brew tap labithiotis/homebrew-tap && brew install mdl
+```
+
+### Manual
+
+Download the archive for your platform from the project's [Releases](https://github.com/labithiotis/mdl/releases) page, extract the binary, and move it somewhere on your `PATH`.
+
+```bash
+chmod +x mdl
+mv mdl /usr/local/bin/mdl
 mdl --help
 ```
