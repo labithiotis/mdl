@@ -1,3 +1,4 @@
+import { CarbonAd } from '@carbonads/sdk/ink';
 import { Box, Text } from 'ink';
 import type { PlaylistMetadata, SyncProgress, SyncSummary } from '../lib/types';
 import { Metric } from './components/Metric';
@@ -55,6 +56,8 @@ export function DoneScreen(props: DoneScreenProps) {
           <WorkerRow key={slot.trackId} slot={slot} />
         ))}
       </Panel>
+
+      <CarbonAd serve="CWBDKK7M" interactionId="cli-done" />
     </Box>
   );
 }

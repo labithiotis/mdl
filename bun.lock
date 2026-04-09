@@ -13,11 +13,12 @@
     },
     "packages/cli": {
       "name": "@mdlx/cli",
-      "version": "0.0.21",
+      "version": "0.0.22",
       "bin": {
         "mdl": "release/cli.js",
       },
       "dependencies": {
+        "@carbonads/sdk": "0.2.0",
         "commander": "14.0.1",
         "effect": "3.21.0",
         "ink": "6.8.0",
@@ -79,6 +80,8 @@
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.8", "", { "os": "win32", "cpu": "x64" }, "sha512-vAn7iXDoUbqFXqVocuq1sMYAd33p8+mmurqJkWl6CtIhobd/O6moe4rY5AJvzbunn/qZCdiDVcveqtkFh1e7Hg=="],
 
     "@bufbuild/protobuf": ["@bufbuild/protobuf@2.11.0", "", {}, "sha512-sBXGT13cpmPR5BMgHE6UEEfEaShh5Ror6rfN3yEK5si7QVrtZg8LEPQb0VVhiLRUslD2yLnXtnRzG035J/mZXQ=="],
+
+    "@carbonads/sdk": ["@carbonads/sdk@0.2.0", "", { "peerDependencies": { "ink": ">=6.0.0", "react": ">=19.0.0" }, "optionalPeers": ["ink", "react"] }, "sha512-Np5WL+sy7TwIb3RrwqJGiiu6L6b5ZdENkJWMyxGnGuCYkc9xIeZb4J3Fho7I3BjnfhAUe9WUvm8bGBMU9Bmg4A=="],
 
     "@cloudflare/kv-asset-handler": ["@cloudflare/kv-asset-handler@0.4.0", "", { "dependencies": { "mime": "^3.0.0" } }, "sha512-+tv3z+SPp+gqTIcImN9o0hqE9xyfQjI1XD9pL6NuKjua9B1y7mNYv0S9cP+QEbA4ppVgGZEmKOvHX5G5Ei1CVA=="],
 
