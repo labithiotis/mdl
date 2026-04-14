@@ -51,10 +51,11 @@
     "test:unit": "bun test src"
   },
   "dependencies": {
-    "@carbonads/sdk": "0.2.0",
+    "@carbonads/sdk": "0.2.1",
     "commander": "14.0.1",
     "effect": "3.21.0",
     "ink": "7.0.0",
+    "ink-link": "5.0.0",
     "ink-scroll-view": "0.3.6",
     "ink-spinner": "5.0.0",
     "react": "19.2.0",
