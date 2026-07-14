@@ -581,6 +581,7 @@ function isSkippableYouTubeCandidateError(error: unknown): boolean {
 
   return (
     message.includes('video is not available') ||
+    message.includes('no valid url to decipher') ||
     message.includes('video is login required') ||
     message.includes('login required') ||
     message.includes('private video') ||

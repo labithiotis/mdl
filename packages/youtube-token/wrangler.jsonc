@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "mdl-youtube-token",
+  "main": "src/index.ts",
+  "account_id": "7bc5bf0e3b7386107e27d74c22b449c0",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "placement": { "mode": "smart" },
+  "observability": { "enabled": true },
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "ratelimits": [
+    {
+      "name": "TOKEN_MINT_RATE_LIMITER",
+      "namespace_id": "760291301",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "id": "2812a928915d4f53af499f6dfd16e0a3",
+      "preview_id": "728257d93d3d4f46865a7e4d5ff0a237",
+      "binding": "PO_TOKEN_KV",
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+name: YouTube Token Worker
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/youtube-token.yml"
+      - "packages/youtube-token/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --filter @mdl/youtube-token
+
+      - name: Deploy
+        working-directory: packages/youtube-token
+        run: bunx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

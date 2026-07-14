@@ -5,10 +5,14 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
 import sanitizeFilename from 'sanitize-filename';
-import { Innertube, Log } from 'youtubei.js';
+import { Innertube, Log, Platform } from 'youtubei.js';
 import type { AudioFormat, AudioQuality } from './args';
 import { ensureFfmpegExecutable } from './ffmpeg';
-import { getYouTubeSessionOptions } from './network';
+import {
+  getYouTubePoToken,
+  getYouTubeSessionCacheKey,
+  getYouTubeSessionOptions,
+} from './network';
 import type { PlaylistTrack } from './types';
 
 type VideoMatch = {
@@ -51,8 +55,10 @@ const execFileAsync = promisify(execFile);
 const YOUTUBE_SEARCH_RESULT_COUNT = 5;
 const YOUTUBE_DOWNLOAD_CLIENTS = ['ANDROID', 'MWEB', 'WEB'] as const;
 let youtubeClientPromise: Promise<Innertube> | null = null;
+let youtubeClientSessionKey = '';
 
 Log.setLevel(Log.Level.ERROR);
+Platform.shim.eval = async (data) => new Function(data.output)();
 
 export async function searchYoutubeTrack(
   track: PlaylistTrack
@@ -190,10 +196,37 @@ async function downloadWithYoutubeJs(options: {
   youtubeUrl: string;
   signal?: AbortSignal;
 }): Promise<void> {
+  let lastError: unknown;
+
+  for (const requestClient of YOUTUBE_DOWNLOAD_CLIENTS) {
+    try {
+      await downloadWithYoutubeClient(options, [requestClient]);
+      return;
+    } catch (error) {
+      if (!isRetryableYouTubeClientError(error)) throw error;
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+async function downloadWithYoutubeClient(
+  options: {
+    audioFormat: AudioFormat;
+    audioQuality: AudioQuality;
+    destinationPath: string;
+    onProgress?: (progress: DownloadProgress) => void;
+    youtubeUrl: string;
+    signal?: AbortSignal;
+  },
+  requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][]
+): Promise<void> {
   const ffmpegPath = await ensureFfmpegExecutable();
   const stream = await resolveAudioStream(
     options.youtubeUrl,
-    options.audioFormat
+    options.audioFormat,
+    requestClients
   );
   const args = buildFfmpegArgs({
     audioFormat: options.audioFormat,
@@ -261,18 +294,21 @@ async function downloadWithYoutubeJs(options: {
 
 async function resolveAudioStream(
   youtubeUrl: string,
-  audioFormat: AudioFormat
+  audioFormat: AudioFormat,
+  requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][] = YOUTUBE_DOWNLOAD_CLIENTS
 ): Promise<YouTubeAudioStream> {
   const videoId = extractYouTubeVideoId(youtubeUrl);
-  const client = await getYouTubeClient();
+  const poToken = await getYouTubePoToken(videoId).catch(() => undefined);
+  const client = await getYouTubeClient(poToken);
   const requestedContainer = getRequestedContainer(audioFormat);
   let lastError: unknown = null;
 
-  for (const requestClient of YOUTUBE_DOWNLOAD_CLIENTS) {
+  for (const requestClient of requestClients) {
     const requestOptions = {
       client: requestClient,
       type: 'audio' as const,
       format: requestedContainer,
+      ...(poToken ? { po_token: poToken.poToken } : {}),
     };
 
     try {
@@ -314,7 +350,10 @@ export function isRetryableYouTubeClientError(error: unknown): boolean {
 
   return (
     isStreamingDataUnavailableError(error) ||
-    normalizedMessage.includes('login required')
+    normalizedMessage.includes('login required') ||
+    normalizedMessage.includes('no valid url to decipher') ||
+    normalizedMessage.includes('server responded with a non 2xx status code') ||
+    normalizedMessage.includes('audio stream request failed with status 403')
   );
 }
 
@@ -324,51 +363,59 @@ async function resolveAudioStreamForClient(params: {
     client: (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number];
     type: 'audio';
     format: 'mp4' | 'webm';
+    po_token?: string;
   };
   requestedContainer: 'mp4' | 'webm';
   videoId: string;
 }): Promise<YouTubeAudioStream> {
-  try {
-    const selected = await params.client.getStreamingData(
-      params.videoId,
-      params.requestOptions
-    );
-    const downloadStream = await params.client.download(
-      params.videoId,
-      params.requestOptions
-    );
-    const mimeType = String(selected.mime_type);
-    const format = mimeType.includes('webm') ? 'webm' : 'mp4';
+  const selected = await params.client.getStreamingData(
+    params.videoId,
+    params.requestOptions
+  );
+  const downloadStream = await fetchYouTubeAudioStream(selected.url);
+  const mimeType = String(selected.mime_type);
+  const format = mimeType.includes('webm') ? 'webm' : 'mp4';
 
-    return {
-      contentLength:
-        typeof selected.content_length === 'number'
-          ? selected.content_length
-          : undefined,
-      format,
-      mimeType,
-      stream: downloadStream,
-    };
-  } catch (error) {
-    if (!isStreamingDataUnavailableError(error)) {
-      throw error;
-    }
+  return {
+    contentLength:
+      typeof selected.content_length === 'number'
+        ? selected.content_length
+        : undefined,
+    format,
+    mimeType,
+    stream: downloadStream,
+  };
+}
 
-    // Some videos no longer expose decipherable streaming metadata for the
-    // chosen client, but download() can still provide a readable audio stream.
-    const downloadStream = await params.client.download(
-      params.videoId,
-      params.requestOptions
+async function fetchYouTubeAudioStream(
+  url: string | undefined
+): Promise<ReadableStream<Uint8Array>> {
+  if (!url) throw new Error('YouTube did not provide a deciphered audio URL.');
+
+  const streamUrl = new URL(url);
+  streamUrl.searchParams.set(
+    'cpn',
+    crypto.randomUUID().replaceAll('-', '').slice(0, 16)
+  );
+  const response = await fetch(streamUrl, {
+    headers: {
+      accept: '*/*',
+      dnt: '1',
+      origin: 'https://www.youtube.com',
+      referer: 'https://www.youtube.com',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `YouTube audio stream request failed with status ${response.status}.`
     );
-
-    return {
-      contentLength: undefined,
-      format: params.requestedContainer,
-      mimeType:
-        params.requestedContainer === 'webm' ? 'audio/webm' : 'audio/mp4',
-      stream: downloadStream,
-    };
   }
+
+  if (!response.body)
+    throw new Error('YouTube audio stream response had no body.');
+
+  return response.body;
 }
 
 function buildFfmpegArgs(params: {
@@ -522,8 +569,17 @@ function formatBytes(value?: number): string | undefined {
   return `${Math.round(size * 10) / 10} ${units[unitIndex]}`;
 }
 
-async function getYouTubeClient(): Promise<Innertube> {
-  youtubeClientPromise ??= Innertube.create(getYouTubeSessionOptions());
+async function getYouTubeClient(poToken?: {
+  poToken: string;
+  visitorData?: string;
+}): Promise<Innertube> {
+  const sessionKey = getYouTubeSessionCacheKey(poToken);
+
+  if (!youtubeClientPromise || youtubeClientSessionKey !== sessionKey) {
+    youtubeClientSessionKey = sessionKey;
+    youtubeClientPromise = Innertube.create(getYouTubeSessionOptions(poToken));
+  }
+
   return youtubeClientPromise;
 }
 

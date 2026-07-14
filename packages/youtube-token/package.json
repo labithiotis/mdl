@@ -1,0 +1,21 @@
+{
+  "name": "@mdl/youtube-token-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --remote",
+    "types": "wrangler types --include-runtime=false",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/puppeteer": "1.1.0",
+    "bgutils-js": "3.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260710.1",
+    "wrangler": "4.110.0"
+  }
+}
