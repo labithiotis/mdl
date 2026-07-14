@@ -5,3 +5,4 @@ music/
 .DS_Store
 *.tsbuildinfo
 *.tgz
+.wrangler

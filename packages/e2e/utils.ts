@@ -35,6 +35,7 @@ export async function runCli(
     cwd?: string;
     env?: Record<string, string | undefined>;
     rejectOnNonZeroExit?: boolean;
+    timeoutMs?: number;
   }
 ): Promise<CliRunResult> {
   const cwd =
@@ -63,7 +64,7 @@ export async function runCli(
     stderr += output;
   });
 
-  const exitCode = await waitForProcessExit(child, CLI_TIMEOUT_MS);
+  const exitCode = await waitForProcessExit(child, options?.timeoutMs);
 
   const result = {
     command,

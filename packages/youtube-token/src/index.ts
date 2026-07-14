@@ -70,24 +70,31 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
 async function mintToken(videoId: string, env: Env): Promise<TokenPayload> {
   console.log('Get a new token for videoId', videoId);
+  const coldStartToken = await mintColdStartToken().catch(() => null);
+  if (coldStartToken) return coldStartToken;
+
   const browser = await getBrowser(env);
   const page = await browser.newPage();
 
   try {
     const tokenWatcher = watchForPlayerToken(page);
 
-    await page.setViewport({ height: 720, width: 1280 });
-    await page.goto(`https://www.youtube.com/watch?v=${videoId}`, {
-      waitUntil: 'domcontentloaded',
-    });
-    await dismissConsent(page);
-    await page
-      .locator('.ytp-large-play-button, video, body')
-      .click()
-      .catch(() => undefined);
-    await page.evaluate(() => {
-      const video = document.querySelector('video');
-      void video?.play?.();
+    await runMintStage('setting viewport', () =>
+      page.setViewport({ height: 720, width: 1280 })
+    );
+    await runMintStage('loading video page', () =>
+      page.goto(`https://www.youtube.com/watch?v=${videoId}`, {
+        waitUntil: 'domcontentloaded',
+      })
+    );
+    await runMintStage('dismissing consent', () => dismissConsent(page));
+    await runMintStage('starting playback', async () => {
+      const playTarget = await page.$('.ytp-large-play-button, video, body');
+      await playTarget?.click().catch(() => undefined);
+      await page.evaluate(() => {
+        const video = document.querySelector('video');
+        void video?.play?.();
+      });
     });
 
     const pageToken = await waitForTokenFromPage(page);
@@ -107,9 +114,6 @@ async function mintToken(videoId: string, env: Env): Promise<TokenPayload> {
               : String(diagnosticError),
         })
       );
-      const diagnosticToken = tokenFromDiagnostics(diagnostics);
-      if (diagnosticToken) return diagnosticToken;
-
       throw new Error(
         `${error instanceof Error ? error.message : String(error)} Diagnostics: ${JSON.stringify(diagnostics)}`
       );
@@ -117,6 +121,19 @@ async function mintToken(videoId: string, env: Env): Promise<TokenPayload> {
   } finally {
     await page.close().catch(() => undefined);
     browser.disconnect();
+  }
+}
+
+async function runMintStage<T>(
+  stage: string,
+  action: () => Promise<T>
+): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    throw new Error(
+      `Token mint failed while ${stage}: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
@@ -130,22 +147,50 @@ async function waitForTokenFromPage(page: Page): Promise<TokenPayload | null> {
   return null;
 }
 
-function tokenFromDiagnostics(
-  diagnostics: Record<string, unknown>
-): TokenPayload | null {
-  const getVal = (val: unknown) => (typeof val === 'string' ? val : undefined);
-  const visitorData =
-    getVal(diagnostics.visitorDataFromSearch) ??
-    getVal(diagnostics.innertubeVisitorData) ??
-    getVal(diagnostics.visitorDataFromGet);
+async function mintColdStartToken(): Promise<TokenPayload> {
+  const visitorId = crypto.randomUUID().replaceAll('-', '').slice(0, 11);
+  const response = await fetch('https://www.youtube.com/sw.js_data', {
+    headers: {
+      accept: '*/*',
+      'accept-language': 'en-US',
+      cookie: `PREF=tz=UTC;VISITOR_INFO1_LIVE=${visitorId};`,
+      referer: 'https://www.youtube.com/sw.js',
+    },
+  });
 
-  if (!visitorData?.trim()) return null;
+  if (!response.ok) {
+    throw new Error(`YouTube session bootstrap failed (${response.status}).`);
+  }
+
+  const text = await response.text();
+  if (!text.startsWith(")]}'")) {
+    throw new Error('YouTube session bootstrap returned an invalid response.');
+  }
+
+  const data: unknown = JSON.parse(text.replace(/^\)\]\}'/, ''));
+  const visitorData = normalizeVisitorData(
+    getNestedArrayValue(data, [0, 2, 0, 0, 13])
+  );
+  if (!visitorData) {
+    throw new Error('YouTube session bootstrap did not return visitor data.');
+  }
 
   return {
     expiresAt: new Date(Date.now() + CACHE_TTL_SECONDS * 1000).toISOString(),
-    poToken: BG.PoToken.generateColdStartToken(visitorData),
+    poToken: BG.PoToken.generateColdStartToken(visitorId),
     visitorData,
   };
+}
+
+function getNestedArrayValue(value: unknown, indexes: number[]): unknown {
+  let current = value;
+
+  for (const index of indexes) {
+    if (!Array.isArray(current)) return undefined;
+    current = current[index];
+  }
+
+  return current;
 }
 
 async function getBrowser(env: Env): Promise<Browser> {
@@ -215,7 +260,8 @@ async function getPageDiagnostics(
         .getEntriesByType('resource')
         .map((entry) => entry.name)
         .filter((name) => name.includes('youtube') || name.includes('google'))
-        .slice(-20),
+        .slice(-10)
+        .map((name) => name.slice(0, 200)),
       title: document.title,
       visitorDataFromGet:
         typeof globalScope.ytcfg?.get?.('VISITOR_DATA') === 'string'
@@ -287,14 +333,11 @@ async function readTokenFromPage(page: Page): Promise<TokenPayload | null> {
     return payload.poToken && payload.visitorData ? payload : null;
   });
 
-  if (!token?.visitorData) return null;
-
-  const poToken =
-    token.poToken ?? BG.PoToken.generateColdStartToken(token.visitorData);
+  if (!token?.poToken || !token.visitorData) return null;
 
   return {
     expiresAt: new Date(Date.now() + CACHE_TTL_SECONDS * 1000).toISOString(),
-    poToken,
+    poToken: token.poToken,
     visitorData: token.visitorData,
   };
 }
@@ -379,6 +422,10 @@ function findStringValue(value: unknown, key: string): string | undefined {
   }
 
   return undefined;
+}
+
+function normalizeVisitorData(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
 function parsePlayerRequestPayload(

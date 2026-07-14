@@ -368,23 +368,38 @@ async function resolveAudioStreamForClient(params: {
   requestedContainer: 'mp4' | 'webm';
   videoId: string;
 }): Promise<YouTubeAudioStream> {
-  const selected = await params.client.getStreamingData(
-    params.videoId,
-    params.requestOptions
-  );
-  const downloadStream = await fetchYouTubeAudioStream(selected.url);
-  const mimeType = String(selected.mime_type);
-  const format = mimeType.includes('webm') ? 'webm' : 'mp4';
+  try {
+    const selected = await params.client.getStreamingData(
+      params.videoId,
+      params.requestOptions
+    );
+    const downloadStream = await fetchYouTubeAudioStream(selected.url);
+    const mimeType = String(selected.mime_type);
+    const format = mimeType.includes('webm') ? 'webm' : 'mp4';
 
-  return {
-    contentLength:
-      typeof selected.content_length === 'number'
-        ? selected.content_length
-        : undefined,
-    format,
-    mimeType,
-    stream: downloadStream,
-  };
+    return {
+      contentLength:
+        typeof selected.content_length === 'number'
+          ? selected.content_length
+          : undefined,
+      format,
+      mimeType,
+      stream: downloadStream,
+    };
+  } catch (error) {
+    if (!isRetryableYouTubeClientError(error)) throw error;
+
+    return {
+      contentLength: undefined,
+      format: params.requestedContainer,
+      mimeType:
+        params.requestedContainer === 'webm' ? 'audio/webm' : 'audio/mp4',
+      stream: await params.client.download(
+        params.videoId,
+        params.requestOptions
+      ),
+    };
+  }
 }
 
 async function fetchYouTubeAudioStream(

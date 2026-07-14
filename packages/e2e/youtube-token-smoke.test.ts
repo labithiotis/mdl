@@ -15,13 +15,10 @@ test('downloads and validates the first YouTube Music track', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'mdl-youtube-smoke-'));
 
   try {
-    const cliResult = await runCli([
-      '--output',
-      directory,
-      '--count',
-      '1',
-      SMOKE_TEST_ALBUM_URL,
-    ]);
+    const cliResult = await runCli(
+      ['--output', directory, '--count', '1', SMOKE_TEST_ALBUM_URL],
+      { timeoutMs: 119_000 }
+    );
     const audioPath = await findFirstAudioFile(directory);
 
     expect(audioPath, cliResult.combinedOutput).toBeTruthy();

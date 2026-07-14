@@ -26,7 +26,6 @@ Tokens are cached in KV for up to one hour per video ID. Cache misses are
 limited to 30 token mints per minute in each Cloudflare location to protect the
 Browser Rendering quota.
 
-Important: this uses Cloudflare Browser Rendering via `@cloudflare/puppeteer`,
-not plain Worker JavaScript. The browser binding is required because YouTube's
-BotGuard flow is expected to run inside a real browser page context. The worker
-reuses a browser across warm requests and opens one page per token mint.
+The worker first bootstraps matching visitor data from YouTube and returns a
+cold-start token. Cloudflare Browser Rendering is retained as a fallback for
+the full BotGuard flow when session bootstrap is unavailable.

@@ -5,7 +5,16 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["packages/**/*.ts", "packages/**/*.tsx", "*.json", "*.md"]
+    "includes": [
+      "packages/**/*.ts",
+      "packages/**/*.tsx",
+      "*.json",
+      "*.md",
+      "!**/.wrangler",
+      "!**/.output",
+      "!**/dist",
+      "!**/build"
+    ]
   },
   "formatter": {
     "enabled": true,
