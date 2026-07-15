@@ -75,18 +75,12 @@ export function Providers() {
               one command
             </span>
           </h2>
-          <p className="mt-4 text-lg text-zinc-400">
-            Paste a URL from any supported service. mdl handles the rest.
-          </p>
+          <p className="mt-4 text-lg text-zinc-400">Paste a URL from any supported service. mdl handles the rest.</p>
         </div>
 
         <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {PROVIDERS.map((provider, index) => (
-            <ProviderCard
-              key={provider.name}
-              provider={provider}
-              index={index}
-            />
+            <ProviderCard key={provider.name} provider={provider} index={index} />
           ))}
         </div>
       </div>
@@ -94,13 +88,7 @@ export function Providers() {
   );
 }
 
-function ProviderCard({
-  provider,
-  index,
-}: {
-  readonly provider: ProviderInfo;
-  readonly index: number;
-}) {
+function ProviderCard({ provider, index }: { readonly provider: ProviderInfo; readonly index: number }) {
   const delayClass = `animation-delay-${(index % 9) * 100}` as string;
 
   return (
@@ -113,12 +101,7 @@ function ProviderCard({
       <div
         className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${provider.color} p-2.5 shadow-lg transition-transform group-hover:scale-110`}
       >
-        <svg
-          aria-hidden="true"
-          className="h-full w-full text-white"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-        >
+        <svg aria-hidden="true" className="h-full w-full text-white" viewBox="0 0 24 24" fill="currentColor">
           <path d={provider.icon} />
         </svg>
       </div>

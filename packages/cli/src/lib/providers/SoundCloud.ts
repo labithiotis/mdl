@@ -13,53 +13,37 @@ export class SoundCloudProvider implements ProviderOptions {
     const segments = pathname.split('/').filter(Boolean);
 
     return (
-      ['soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com'].includes(
-        url.hostname.toLowerCase()
+      ['soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com'].includes(url.hostname.toLowerCase()) &&
+      [/^\/[^/]+\/sets\/[^/]+(?:\/)?$/i, /^\/discover\/sets\/[^/]+(?:\/)?$/i, /^\/[^/]+\/[^/]+(?:\/)?$/i].some(
+        (pattern) => pattern.test(pathname)
       ) &&
-      [
-        /^\/[^/]+\/sets\/[^/]+(?:\/)?$/i,
-        /^\/discover\/sets\/[^/]+(?:\/)?$/i,
-        /^\/[^/]+\/[^/]+(?:\/)?$/i,
-      ].some((pattern) => pattern.test(pathname)) &&
       !(segments.length === 2 && segments[0] === 'discover') &&
       !(segments.length === 2 && segments[1] === 'sets')
     );
   }
 
-  public async fetch(
-    url: string,
-    _options: FetchOptions
-  ): Promise<PlaylistMetadata> {
+  public async fetch(url: string, _options: FetchOptions): Promise<PlaylistMetadata> {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        `SoundCloud playlist request failed with status ${response.status}.`
-      );
+      throw new Error(`SoundCloud playlist request failed with status ${response.status}.`);
     }
 
     const html = await response.text();
-    return this.isTrackUrl(url)
-      ? this.parseTrackHtml(html, url)
-      : this.parsePlaylistHtml(html, url);
+    return this.isTrackUrl(url) ? this.parseTrackHtml(html, url) : this.parsePlaylistHtml(html, url);
   }
 
   public parsePlaylistHtml(html: string, sourceUrl: string): PlaylistMetadata {
     const hydration = this.extractHydration(html);
-    const playlist = hydration.find((item) => item.hydratable === 'playlist')
-      ?.data as SoundCloudPlaylist | undefined;
+    const playlist = hydration.find((item) => item.hydratable === 'playlist')?.data as SoundCloudPlaylist | undefined;
 
     if (!playlist?.id || !playlist.title) {
-      throw new Error(
-        'Could not find SoundCloud playlist metadata in the page.'
-      );
+      throw new Error('Could not find SoundCloud playlist metadata in the page.');
     }
 
     const collectionArtworkUrl = playlist.artwork_url?.trim() || undefined;
     const tracks = (playlist.tracks ?? [])
-      .map((track, index) =>
-        this.normalizeTrack(track, index, collectionArtworkUrl)
-      )
+      .map((track, index) => this.normalizeTrack(track, index, collectionArtworkUrl))
       .filter((track): track is PlaylistTrack => track !== null);
 
     if (tracks.length === 0) {
@@ -79,9 +63,7 @@ export class SoundCloudProvider implements ProviderOptions {
 
   public parseTrackHtml(html: string, sourceUrl: string): PlaylistMetadata {
     const hydration = this.extractHydration(html);
-    const track = hydration.find((item) => item.hydratable === 'sound')?.data as
-      | SoundCloudTrack
-      | undefined;
+    const track = hydration.find((item) => item.hydratable === 'sound')?.data as SoundCloudTrack | undefined;
 
     if (!track?.id || !track.title) {
       throw new Error('Could not find SoundCloud track metadata in the page.');
@@ -105,9 +87,7 @@ export class SoundCloudProvider implements ProviderOptions {
   }
 
   private extractHydration(html: string): SoundCloudHydrationItem[] {
-    const match = html.match(
-      /window\.__sc_hydration\s*=\s*(\[.*?\]);<\/script>/s
-    );
+    const match = html.match(/window\.__sc_hydration\s*=\s*(\[.*?\]);<\/script>/s);
 
     if (!match?.[1]) {
       throw new Error('Could not find SoundCloud hydration data in the page.');
@@ -116,14 +96,9 @@ export class SoundCloudProvider implements ProviderOptions {
     return JSON.parse(match[1]) as SoundCloudHydrationItem[];
   }
 
-  private normalizeTrack(
-    track: SoundCloudTrack,
-    _index: number,
-    collectionArtworkUrl?: string
-  ): PlaylistTrack | null {
+  private normalizeTrack(track: SoundCloudTrack, _index: number, collectionArtworkUrl?: string): PlaylistTrack | null {
     const title = track.title?.trim();
-    const artist =
-      track.publisher_metadata?.artist?.trim() || track.user?.username?.trim();
+    const artist = track.publisher_metadata?.artist?.trim() || track.user?.username?.trim();
 
     if (!track.id || !title || !artist) {
       return null;
@@ -134,14 +109,9 @@ export class SoundCloudProvider implements ProviderOptions {
       title,
       artists: [artist],
       album: track.publisher_metadata?.album_title?.trim() || undefined,
-      artworkUrl: getFirstNonEmptyString(
-        track.artwork_url,
-        collectionArtworkUrl
-      ),
+      artworkUrl: getFirstNonEmptyString(track.artwork_url, collectionArtworkUrl),
       durationMs:
-        typeof track.duration === 'number' && Number.isFinite(track.duration)
-          ? Math.round(track.duration)
-          : undefined,
+        typeof track.duration === 'number' && Number.isFinite(track.duration) ? Math.round(track.duration) : undefined,
       sourceUrl: track.permalink_url?.trim() || undefined,
     };
   }

@@ -24,10 +24,7 @@ export class TidalProvider implements ProviderOptions {
     );
   }
 
-  public async fetch(
-    url: string,
-    options: FetchOptions
-  ): Promise<PlaylistMetadata> {
+  public async fetch(url: string, options: FetchOptions): Promise<PlaylistMetadata> {
     const { signal } = options;
     const collectionKind = this.getCollectionKind(url);
 
@@ -66,10 +63,7 @@ export class TidalProvider implements ProviderOptions {
     };
   }
 
-  private async fetchTrack(
-    sourceUrl: string,
-    signal?: AbortSignal
-  ): Promise<PlaylistMetadata> {
+  private async fetchTrack(sourceUrl: string, signal?: AbortSignal): Promise<PlaylistMetadata> {
     const trackId = Number.parseInt(this.extractCollectionId(sourceUrl), 10);
     const payload = await this.fetchTrackData(trackId, signal);
     const track = payload.data?.track;
@@ -95,10 +89,7 @@ export class TidalProvider implements ProviderOptions {
     };
   }
 
-  public parsePlaylistHtml(
-    html: string,
-    sourceUrl: string
-  ): Omit<PlaylistMetadata, 'id' | 'provider' | 'tracks'> {
+  public parsePlaylistHtml(html: string, sourceUrl: string): Omit<PlaylistMetadata, 'id' | 'provider' | 'tracks'> {
     const title = this.extractMetaContent(html, 'property', 'og:title')?.trim();
 
     if (!title) {
@@ -108,19 +99,12 @@ export class TidalProvider implements ProviderOptions {
     return {
       title,
       owner: this.extractOwner(html),
-      artworkUrl: this.normalizeAssetUrl(
-        this.extractMetaContent(html, 'property', 'og:image')?.trim()
-      ),
-      sourceUrl:
-        this.extractMetaContent(html, 'property', 'og:url')?.trim() ||
-        sourceUrl,
+      artworkUrl: this.normalizeAssetUrl(this.extractMetaContent(html, 'property', 'og:image')?.trim()),
+      sourceUrl: this.extractMetaContent(html, 'property', 'og:url')?.trim() || sourceUrl,
     };
   }
 
-  private async fetchAlbum(
-    sourceUrl: string,
-    signal?: AbortSignal
-  ): Promise<PlaylistMetadata> {
+  private async fetchAlbum(sourceUrl: string, signal?: AbortSignal): Promise<PlaylistMetadata> {
     const albumId = Number.parseInt(this.extractCollectionId(sourceUrl), 10);
     const payload = await this.fetchAlbumData(albumId, signal);
     const album = payload.data?.album;
@@ -155,10 +139,7 @@ export class TidalProvider implements ProviderOptions {
     };
   }
 
-  private async fetchPlaylistHtml(
-    sourceUrl: string,
-    signal?: AbortSignal
-  ): Promise<string> {
+  private async fetchPlaylistHtml(sourceUrl: string, signal?: AbortSignal): Promise<string> {
     const response = await fetch(sourceUrl, {
       headers: {
         'user-agent': 'Mozilla/5.0',
@@ -167,18 +148,13 @@ export class TidalProvider implements ProviderOptions {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Tidal playlist request failed with status ${response.status}.`
-      );
+      throw new Error(`Tidal playlist request failed with status ${response.status}.`);
     }
 
     return response.text();
   }
 
-  private async fetchPlaylistTracks(
-    playlistId: string,
-    signal?: AbortSignal
-  ): Promise<TidalPlaylistTracksResponse> {
+  private async fetchPlaylistTracks(playlistId: string, signal?: AbortSignal): Promise<TidalPlaylistTracksResponse> {
     const response = await fetch(TIDAL_GRAPHQL_URL, {
       body: JSON.stringify({
         query: `
@@ -207,15 +183,11 @@ export class TidalProvider implements ProviderOptions {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Tidal track request failed with status ${response.status}.`
-      );
+      throw new Error(`Tidal track request failed with status ${response.status}.`);
     }
 
     const payload = (await response.json()) as TidalPlaylistTracksResponse;
-    const errorMessage = payload.errors?.find(
-      (error) => error.message
-    )?.message;
+    const errorMessage = payload.errors?.find((error) => error.message)?.message;
 
     if (errorMessage) {
       throw new Error(`Tidal track request failed: ${errorMessage}`);
@@ -224,10 +196,7 @@ export class TidalProvider implements ProviderOptions {
     return payload;
   }
 
-  private async fetchAlbumData(
-    albumId: number,
-    signal?: AbortSignal
-  ): Promise<TidalAlbumResponse> {
+  private async fetchAlbumData(albumId: number, signal?: AbortSignal): Promise<TidalAlbumResponse> {
     const response = await fetch(TIDAL_GRAPHQL_URL, {
       body: JSON.stringify({
         query: `
@@ -260,15 +229,11 @@ export class TidalProvider implements ProviderOptions {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Tidal album request failed with status ${response.status}.`
-      );
+      throw new Error(`Tidal album request failed with status ${response.status}.`);
     }
 
     const payload = (await response.json()) as TidalAlbumResponse;
-    const errorMessage = payload.errors?.find(
-      (error) => error.message
-    )?.message;
+    const errorMessage = payload.errors?.find((error) => error.message)?.message;
 
     if (errorMessage) {
       throw new Error(`Tidal album request failed: ${errorMessage}`);
@@ -277,10 +242,7 @@ export class TidalProvider implements ProviderOptions {
     return payload;
   }
 
-  private async fetchTrackData(
-    trackId: number,
-    signal?: AbortSignal
-  ): Promise<TidalTrackResponse> {
+  private async fetchTrackData(trackId: number, signal?: AbortSignal): Promise<TidalTrackResponse> {
     const response = await fetch(TIDAL_GRAPHQL_URL, {
       body: JSON.stringify({
         query: `
@@ -307,15 +269,11 @@ export class TidalProvider implements ProviderOptions {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Tidal track request failed with status ${response.status}.`
-      );
+      throw new Error(`Tidal track request failed with status ${response.status}.`);
     }
 
     const payload = (await response.json()) as TidalTrackResponse;
-    const errorMessage = payload.errors?.find(
-      (error) => error.message
-    )?.message;
+    const errorMessage = payload.errors?.find((error) => error.message)?.message;
 
     if (errorMessage) {
       throw new Error(`Tidal track request failed: ${errorMessage}`);
@@ -324,10 +282,7 @@ export class TidalProvider implements ProviderOptions {
     return payload;
   }
 
-  private normalizeTrack(
-    track: TidalTrackItem,
-    collectionArtworkUrl?: string
-  ): PlaylistTrack | null {
+  private normalizeTrack(track: TidalTrackItem, collectionArtworkUrl?: string): PlaylistTrack | null {
     const title = track.title?.trim();
     const artists = (track.artists ?? [])
       .map((artist) => artist.name?.trim())
@@ -357,9 +312,7 @@ export class TidalProvider implements ProviderOptions {
         typeof track.duration === 'number' && Number.isFinite(track.duration)
           ? Math.round(track.duration * 1000)
           : undefined,
-      sourceUrl: track.id
-        ? `https://tidal.com/browse/track/${track.id}`
-        : undefined,
+      sourceUrl: track.id ? `https://tidal.com/browse/track/${track.id}` : undefined,
     };
   }
 
@@ -376,16 +329,9 @@ export class TidalProvider implements ProviderOptions {
     return match?.[1]?.trim() || undefined;
   }
 
-  private extractMetaContent(
-    html: string,
-    attribute: 'name' | 'property',
-    key: string
-  ): string | undefined {
+  private extractMetaContent(html: string, attribute: 'name' | 'property', key: string): string | undefined {
     const escapedKey = this.escapeRegExp(key);
-    const pattern = new RegExp(
-      `<meta[^>]+${attribute}=["']${escapedKey}["'][^>]+content=["']([^"']+)["'][^>]*>`,
-      'i'
-    );
+    const pattern = new RegExp(`<meta[^>]+${attribute}=["']${escapedKey}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i');
 
     return pattern.exec(html)?.[1];
   }
@@ -405,14 +351,10 @@ export class TidalProvider implements ProviderOptions {
 
   private extractCollectionId(sourceUrl: string): string {
     const parsedUrl = new URL(sourceUrl);
-    const match = parsedUrl.pathname.match(
-      /\/(?:album|playlist|track)\/([0-9a-z-]+)/i
-    );
+    const match = parsedUrl.pathname.match(/\/(?:album|playlist|track)\/([0-9a-z-]+)/i);
 
     if (!match?.[1]) {
-      throw new Error(
-        'Could not determine the Tidal collection id from the URL.'
-      );
+      throw new Error('Could not determine the Tidal collection id from the URL.');
     }
 
     return match[1];

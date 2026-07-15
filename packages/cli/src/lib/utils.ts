@@ -3,20 +3,19 @@ import { Effect, type Either, ParseResult, Schedule, Schema } from 'effect';
 const DEFAULT_RETRY_BASE_DELAY_MS = 5000;
 const DEFAULT_RETRY_COUNT = 2;
 
-export class CliArgumentError extends Schema.TaggedError<CliArgumentError>()(
-  'CliArgumentError',
-  { message: Schema.String }
-) {}
+export class CliArgumentError extends Schema.TaggedError<CliArgumentError>()('CliArgumentError', {
+  message: Schema.String,
+}) {}
 
-export class ManifestDecodeError extends Schema.TaggedError<ManifestDecodeError>()(
-  'ManifestDecodeError',
-  { message: Schema.String }
-) {}
+export class ManifestDecodeError extends Schema.TaggedError<ManifestDecodeError>()('ManifestDecodeError', {
+  message: Schema.String,
+}) {}
 
-export class TrackSyncError extends Schema.TaggedError<TrackSyncError>()(
-  'TrackSyncError',
-  { reason: Schema.String, stage: Schema.String, trackTitle: Schema.String }
-) {}
+export class TrackSyncError extends Schema.TaggedError<TrackSyncError>()('TrackSyncError', {
+  reason: Schema.String,
+  stage: Schema.String,
+  trackTitle: Schema.String,
+}) {}
 
 export function decodeUnknownEither<A, I>(
   schema: Schema.Schema<A, I, never>,
@@ -25,10 +24,7 @@ export function decodeUnknownEither<A, I>(
   return Schema.decodeUnknownEither(schema)(value);
 }
 
-export function decodeUnknownSync<A, I>(
-  schema: Schema.Schema<A, I, never>,
-  value: unknown
-): A {
+export function decodeUnknownSync<A, I>(schema: Schema.Schema<A, I, never>, value: unknown): A {
   return Schema.decodeUnknownSync(schema)(value);
 }
 
@@ -60,10 +56,7 @@ export function formatEffectError(error: unknown): string {
   return String(error);
 }
 
-export function makeRetrySchedule(options?: {
-  baseDelayMs?: number;
-  maxRetries?: number;
-}) {
+export function makeRetrySchedule(options?: { baseDelayMs?: number; maxRetries?: number }) {
   const baseDelayMs = options?.baseDelayMs ?? DEFAULT_RETRY_BASE_DELAY_MS;
   const maxRetries = options?.maxRetries ?? DEFAULT_RETRY_COUNT;
 
@@ -102,9 +95,7 @@ export function runEffectWithRetry<A, E, R>(params: {
   );
 }
 
-export function getFirstNonEmptyString(
-  ...strings: Array<string | null | undefined>
-): string | undefined {
+export function getFirstNonEmptyString(...strings: Array<string | null | undefined>): string | undefined {
   return strings.find((str) => str?.trim())?.trim();
 }
 

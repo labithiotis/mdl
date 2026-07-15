@@ -6,7 +6,8 @@
   "scripts": {
     "check": "tsc --noEmit",
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev --remote",
+    "dev": "wrangler dev",
+    "test": "bun test src",
     "types": "wrangler types --include-runtime=false",
     "typecheck": "tsc --noEmit"
   },

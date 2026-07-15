@@ -5,15 +5,8 @@ export function Footer() {
     <footer className="border-t border-zinc-800/50 px-6 py-12">
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-6 sm:flex-row">
         <div className="flex items-center gap-2.5">
-          <img
-            src="/favicon.svg"
-            alt=""
-            aria-hidden="true"
-            className="h-7 w-7"
-          />
-          <span className="font-mono text-sm text-zinc-500">
-            mdl &mdash; Music Downloader CLI
-          </span>
+          <img src="/favicon.svg" alt="" aria-hidden="true" className="h-7 w-7" />
+          <span className="font-mono text-sm text-zinc-500">mdl &mdash; Music Downloader CLI</span>
         </div>
 
         <div className="flex items-center gap-6">

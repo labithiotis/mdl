@@ -59,6 +59,12 @@ Choose the extracted audio format and quality:
 mdl "https://open.spotify.com/playlist/..." --format m4a --bitrate 192K
 ```
 
+Skip requesting YouTube Proof of Origin tokens:
+
+```bash
+mdl "https://open.spotify.com/playlist/..." --no-po-token
+```
+
 CLI help:
 
 ```bash

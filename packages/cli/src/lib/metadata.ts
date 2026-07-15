@@ -15,13 +15,9 @@ export async function writeTrackMetadata(params: {
 }): Promise<void> {
   const { filePath, track, signal } = params;
   const ffmpegPath = await ensureFfmpegExecutable();
-  const tempDir = await mkdtemp(
-    path.join(path.dirname(filePath), METADATA_TEMP_DIR_PREFIX)
-  );
+  const tempDir = await mkdtemp(path.join(path.dirname(filePath), METADATA_TEMP_DIR_PREFIX));
   const outputPath = path.join(tempDir, path.basename(filePath));
-  let coverPath = track.artworkUrl
-    ? path.join(tempDir, getArtworkFileName(track.artworkUrl))
-    : null;
+  let coverPath = track.artworkUrl ? path.join(tempDir, getArtworkFileName(track.artworkUrl)) : null;
 
   try {
     if (coverPath && track.artworkUrl) {
@@ -59,16 +55,8 @@ export async function writeTrackMetadata(params: {
   }
 }
 
-function buildMetadataArgs(
-  track: PlaylistTrack,
-  hasArtwork: boolean
-): string[] {
-  const metadataArgs = [
-    '-metadata',
-    `title=${track.title}`,
-    '-metadata',
-    `artist=${track.artists.join(', ')}`,
-  ];
+function buildMetadataArgs(track: PlaylistTrack, hasArtwork: boolean): string[] {
+  const metadataArgs = ['-metadata', `title=${track.title}`, '-metadata', `artist=${track.artists.join(', ')}`];
 
   if (track.album) {
     metadataArgs.push('-metadata', `album=${track.album}`);
@@ -88,11 +76,7 @@ function buildMetadataArgs(
   return metadataArgs;
 }
 
-async function downloadArtwork(
-  artworkUrl: string,
-  destinationPath: string,
-  signal?: AbortSignal
-): Promise<void> {
+async function downloadArtwork(artworkUrl: string, destinationPath: string, signal?: AbortSignal): Promise<void> {
   const response = await fetch(artworkUrl, { signal });
 
   if (!response.ok) {

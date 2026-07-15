@@ -8,11 +8,7 @@ import sanitizeFilename from 'sanitize-filename';
 import { Innertube, Log, Platform } from 'youtubei.js';
 import type { AudioFormat, AudioQuality } from './args';
 import { ensureFfmpegExecutable } from './ffmpeg';
-import {
-  getYouTubePoToken,
-  getYouTubeSessionCacheKey,
-  getYouTubeSessionOptions,
-} from './network';
+import { getYouTubePoToken, getYouTubeSessionCacheKey, getYouTubeSessionOptions } from './network';
 import type { PlaylistTrack } from './types';
 
 type VideoMatch = {
@@ -60,23 +56,17 @@ let youtubeClientSessionKey = '';
 Log.setLevel(Log.Level.ERROR);
 Platform.shim.eval = async (data) => new Function(data.output)();
 
-export async function searchYoutubeTrack(
-  track: PlaylistTrack
-): Promise<VideoMatch> {
+export async function searchYoutubeTrack(track: PlaylistTrack): Promise<VideoMatch> {
   const [candidate] = await searchYoutubeTrackCandidates(track);
 
   if (!candidate) {
-    throw new Error(
-      `No YouTube match found for ${track.artists.join(', ')} - ${track.title}.`
-    );
+    throw new Error(`No YouTube match found for ${track.artists.join(', ')} - ${track.title}.`);
   }
 
   return candidate;
 }
 
-export async function searchYoutubeTrackCandidates(
-  track: PlaylistTrack
-): Promise<VideoMatch[]> {
+export async function searchYoutubeTrackCandidates(track: PlaylistTrack): Promise<VideoMatch[]> {
   const query = `${track.artists.join(', ')} - ${track.title} audio`;
   const result = await searchYouTube(query);
   const candidates = result.videos
@@ -84,9 +74,7 @@ export async function searchYoutubeTrackCandidates(
     .sort((left, right) => scoreVideo(track, right) - scoreVideo(track, left));
 
   if (candidates.length === 0) {
-    throw new Error(
-      `No YouTube match found for ${track.artists.join(', ')} - ${track.title}.`
-    );
+    throw new Error(`No YouTube match found for ${track.artists.join(', ')} - ${track.title}.`);
   }
 
   return candidates;
@@ -177,10 +165,7 @@ function scoreVideo(track: PlaylistTrack, video: VideoMatch): number {
   if (!haystack.includes('live')) score += 1;
   if (!haystack.includes('cover')) score += 1;
 
-  if (
-    typeof track.durationMs === 'number' &&
-    typeof video.seconds === 'number'
-  ) {
+  if (typeof track.durationMs === 'number' && typeof video.seconds === 'number') {
     const delta = Math.abs(track.durationMs / 1000 - video.seconds);
     score += Math.max(0, 10 - delta / 5);
   }
@@ -223,11 +208,7 @@ async function downloadWithYoutubeClient(
   requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][]
 ): Promise<void> {
   const ffmpegPath = await ensureFfmpegExecutable();
-  const stream = await resolveAudioStream(
-    options.youtubeUrl,
-    options.audioFormat,
-    requestClients
-  );
+  const stream = await resolveAudioStream(options.youtubeUrl, options.audioFormat, requestClients);
   const args = buildFfmpegArgs({
     audioFormat: options.audioFormat,
     audioQuality: options.audioQuality,
@@ -238,9 +219,7 @@ async function downloadWithYoutubeClient(
     signal: options.signal,
     windowsHide: true,
   });
-  const inputStream = Readable.fromWeb(
-    stream.stream as unknown as NodeReadableStream
-  );
+  const inputStream = Readable.fromWeb(stream.stream as unknown as NodeReadableStream);
 
   if (!child.stdin) {
     inputStream.destroy();
@@ -254,14 +233,9 @@ async function downloadWithYoutubeClient(
       eta: progress.eta,
       percent:
         typeof stream.contentLength === 'number' && stream.contentLength > 0
-          ? Math.min(
-              100,
-              (progress.totalSizeBytes / stream.contentLength) * 100
-            )
+          ? Math.min(100, (progress.totalSizeBytes / stream.contentLength) * 100)
           : undefined,
-      totalSize:
-        formatBytes(stream.contentLength) ||
-        formatBytes(progress.totalSizeBytes),
+      totalSize: formatBytes(stream.contentLength) || formatBytes(progress.totalSizeBytes),
     });
   });
 
@@ -327,15 +301,10 @@ async function resolveAudioStream(
     }
   }
 
-  throw (
-    lastError ??
-    new Error(`Unable to resolve an audio stream for ${youtubeUrl}.`)
-  );
+  throw lastError ?? new Error(`Unable to resolve an audio stream for ${youtubeUrl}.`);
 }
 
-export function getRequestedContainer(
-  audioFormat: AudioFormat
-): 'mp4' | 'webm' {
+export function getRequestedContainer(audioFormat: AudioFormat): 'mp4' | 'webm' {
   return audioFormat === 'opus' ? 'webm' : 'mp4';
 }
 
@@ -369,19 +338,13 @@ async function resolveAudioStreamForClient(params: {
   videoId: string;
 }): Promise<YouTubeAudioStream> {
   try {
-    const selected = await params.client.getStreamingData(
-      params.videoId,
-      params.requestOptions
-    );
+    const selected = await params.client.getStreamingData(params.videoId, params.requestOptions);
     const downloadStream = await fetchYouTubeAudioStream(selected.url);
     const mimeType = String(selected.mime_type);
     const format = mimeType.includes('webm') ? 'webm' : 'mp4';
 
     return {
-      contentLength:
-        typeof selected.content_length === 'number'
-          ? selected.content_length
-          : undefined,
+      contentLength: typeof selected.content_length === 'number' ? selected.content_length : undefined,
       format,
       mimeType,
       stream: downloadStream,
@@ -392,26 +355,17 @@ async function resolveAudioStreamForClient(params: {
     return {
       contentLength: undefined,
       format: params.requestedContainer,
-      mimeType:
-        params.requestedContainer === 'webm' ? 'audio/webm' : 'audio/mp4',
-      stream: await params.client.download(
-        params.videoId,
-        params.requestOptions
-      ),
+      mimeType: params.requestedContainer === 'webm' ? 'audio/webm' : 'audio/mp4',
+      stream: await params.client.download(params.videoId, params.requestOptions),
     };
   }
 }
 
-async function fetchYouTubeAudioStream(
-  url: string | undefined
-): Promise<ReadableStream<Uint8Array>> {
+async function fetchYouTubeAudioStream(url: string | undefined): Promise<ReadableStream<Uint8Array>> {
   if (!url) throw new Error('YouTube did not provide a deciphered audio URL.');
 
   const streamUrl = new URL(url);
-  streamUrl.searchParams.set(
-    'cpn',
-    crypto.randomUUID().replaceAll('-', '').slice(0, 16)
-  );
+  streamUrl.searchParams.set('cpn', crypto.randomUUID().replaceAll('-', '').slice(0, 16));
   const response = await fetch(streamUrl, {
     headers: {
       accept: '*/*',
@@ -422,13 +376,10 @@ async function fetchYouTubeAudioStream(
   });
 
   if (!response.ok) {
-    throw new Error(
-      `YouTube audio stream request failed with status ${response.status}.`
-    );
+    throw new Error(`YouTube audio stream request failed with status ${response.status}.`);
   }
 
-  if (!response.body)
-    throw new Error('YouTube audio stream response had no body.');
+  if (!response.body) throw new Error('YouTube audio stream response had no body.');
 
   return response.body;
 }
@@ -456,10 +407,7 @@ function buildFfmpegArgs(params: {
   if (params.audioQuality !== 'best') {
     if (/^\d+K$/i.test(params.audioQuality)) {
       args.push('-b:a', params.audioQuality);
-    } else if (
-      /^\d+$/.test(params.audioQuality) &&
-      params.audioFormat === 'mp3'
-    ) {
+    } else if (/^\d+$/.test(params.audioQuality) && params.audioFormat === 'mp3') {
       args.push('-q:a', params.audioQuality);
     }
   }
@@ -492,9 +440,7 @@ type FfmpegProgress = {
   totalSizeBytes: number;
 };
 
-function createFfmpegProgressParser(
-  onProgress: (progress: FfmpegProgress) => void
-): (chunk: string) => void {
+function createFfmpegProgressParser(onProgress: (progress: FfmpegProgress) => void): (chunk: string) => void {
   let buffer = '';
   const currentProgress: FfmpegProgress = { totalSizeBytes: 0 };
 
@@ -561,8 +507,7 @@ function parseDurationSeconds(value?: string): number | undefined {
     return undefined;
   }
 
-  const [hours, minutes, seconds] =
-    parts.length === 3 ? parts : [0, parts[0], parts[1]];
+  const [hours, minutes, seconds] = parts.length === 3 ? parts : [0, parts[0], parts[1]];
 
   return (hours * 60 + minutes) * 60 + seconds;
 }
@@ -584,10 +529,7 @@ function formatBytes(value?: number): string | undefined {
   return `${Math.round(size * 10) / 10} ${units[unitIndex]}`;
 }
 
-async function getYouTubeClient(poToken?: {
-  poToken: string;
-  visitorData?: string;
-}): Promise<Innertube> {
+async function getYouTubeClient(poToken?: { poToken: string; visitorData?: string }): Promise<Innertube> {
   const sessionKey = getYouTubeSessionCacheKey(poToken);
 
   if (!youtubeClientPromise || youtubeClientSessionKey !== sessionKey) {

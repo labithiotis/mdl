@@ -11,6 +11,7 @@ describe('args', () => {
       audioFormat: 'mp3',
       audioQuality: 'best',
       downloadParallelism: 10,
+      usePoToken: true,
     });
   });
 
@@ -29,6 +30,7 @@ describe('args', () => {
       audioFormat: 'mp3',
       audioQuality: 'best',
       downloadParallelism: 7,
+      usePoToken: true,
       trackCount: 3,
       outputDir: './music',
       url: 'https://open.spotify.com/playlist/example',
@@ -49,10 +51,10 @@ describe('args', () => {
       audioFormat: 'mp3',
       audioQuality: 'best',
       downloadParallelism: 10,
+      usePoToken: true,
       proxy: 'https://user:pass@dc.oxylabs.io:8000/',
       ytCookie: 'SID=abc; HSID=def',
-      ytUserAgent:
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:149.0) Gecko/20100101 Firefox/149.0',
+      ytUserAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:149.0) Gecko/20100101 Firefox/149.0',
     });
   });
 
@@ -61,6 +63,13 @@ describe('args', () => {
       audioFormat: 'm4a',
       audioQuality: '192K',
       downloadParallelism: 10,
+      usePoToken: true,
+    });
+  });
+
+  test('parseCliArgs can disable YouTube PO tokens', () => {
+    expect(parseCliArgs(['--no-po-token'])).toMatchObject({
+      usePoToken: false,
     });
   });
 
@@ -115,19 +124,12 @@ describe('args', () => {
     expect(() => {
       parseCliArgs(['--version']);
     }).toThrow('exit:0');
-    expect(stdoutWrite).toHaveBeenCalledWith(
-      expect.stringMatching(/\d+\.\d+\.\d+/)
-    );
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringMatching(/\d+\.\d+\.\d+/));
   });
 
   test('parseCliArgs rejects unexpected arguments', () => {
     expect(() => {
-      parseCliArgs([
-        'https://open.spotify.com/playlist/example',
-        'unexpected-token',
-      ]);
-    }).toThrow(
-      'Unexpected argument "unexpected-token". Please use one of these:'
-    );
+      parseCliArgs(['https://open.spotify.com/playlist/example', 'unexpected-token']);
+    }).toThrow('Unexpected argument "unexpected-token". Please use one of these:');
   });
 });

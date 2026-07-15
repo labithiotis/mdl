@@ -3,19 +3,15 @@ import { normalizeUrlInput } from './urlInput';
 
 describe('urlInput', () => {
   test('keeps a single-line url unchanged', () => {
-    expect(
-      normalizeUrlInput(
-        'https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2'
-      )
-    ).toBe('https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2');
+    expect(normalizeUrlInput('https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2')).toBe(
+      'https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2'
+    );
   });
 
   test('removes multiline whitespace around a pasted url', () => {
-    expect(
-      normalizeUrlInput(
-        '\nhttps://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2\n'
-      )
-    ).toBe('https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2');
+    expect(normalizeUrlInput('\nhttps://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2\n')).toBe(
+      'https://open.spotify.com/playlist/5GAMKM0kDTvEMk244CL9n2'
+    );
   });
 
   test('extracts the first http url from pasted multiline text', () => {

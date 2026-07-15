@@ -34,8 +34,7 @@ describe('state', () => {
       url: '',
       phase: {
         kind: 'collecting-input',
-        errorMessage:
-          'Invalid URL. Provide a full http:// or https:// music URL.',
+        errorMessage: 'Invalid URL. Provide a full http:// or https:// music URL.',
       },
     });
   });

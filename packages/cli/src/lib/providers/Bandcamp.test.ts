@@ -14,18 +14,13 @@ describe('bandcamp', () => {
   </html>
   `;
 
-    const playlist = provider.parsePlaylistHtml(
-      html,
-      'https://bandcamp.com/fuzzycracklins/playlist/fuzzys-fresh-fuzz'
-    );
+    const playlist = provider.parsePlaylistHtml(html, 'https://bandcamp.com/fuzzycracklins/playlist/fuzzys-fresh-fuzz');
 
     expect(playlist.provider).toBe('bandcamp');
     expect(playlist.id).toBe('551253');
     expect(playlist.title).toBe("Fuzzy's Fresh Fuzz");
     expect(playlist.owner).toBe('Fuzzy Cracklins');
-    expect(playlist.artworkUrl).toBe(
-      'https://f4.bcbits.com/img/0039779773_71.jpg'
-    );
+    expect(playlist.artworkUrl).toBe('https://f4.bcbits.com/img/0039779773_71.jpg');
     expect(playlist.tracks[0]).toEqual({
       id: '4294444853',
       title: 'Trinity',
@@ -59,16 +54,10 @@ describe('bandcamp', () => {
     );
 
     expect(playlist.provider).toBe('bandcamp');
-    expect(playlist.id).toBe(
-      'https://daily.bandcamp.com/lists/cajun-creole-accordion-music-guide'
-    );
-    expect(playlist.title).toBe(
-      'The Long, Joyous Tradition of Cajun and Creole Accordion Music'
-    );
+    expect(playlist.id).toBe('https://daily.bandcamp.com/lists/cajun-creole-accordion-music-guide');
+    expect(playlist.title).toBe('The Long, Joyous Tradition of Cajun and Creole Accordion Music');
     expect(playlist.owner).toBe('Bandcamp Daily');
-    expect(playlist.artworkUrl).toBe(
-      'https://f4.bcbits.com/img/0043322492_171.jpg'
-    );
+    expect(playlist.artworkUrl).toBe('https://f4.bcbits.com/img/0043322492_171.jpg');
     expect(playlist.tracks[0]).toEqual({
       id: '4180305335',
       title: 'Where You Are',
@@ -76,8 +65,7 @@ describe('bandcamp', () => {
       album: 'Live From Memphis',
       artworkUrl: 'https://f4.bcbits.com/img/0435169997_71.jpg',
       durationMs: 201806,
-      sourceUrl:
-        'https://marcellaandherlovers.bandcamp.com/album/live-from-memphis',
+      sourceUrl: 'https://marcellaandherlovers.bandcamp.com/album/live-from-memphis',
     });
   });
 
@@ -101,17 +89,14 @@ describe('bandcamp', () => {
     expect(playlist.id).toBe('1093807616');
     expect(playlist.title).toBe('Live From Memphis');
     expect(playlist.owner).toBe('Marcell and Her Lovers');
-    expect(playlist.artworkUrl).toBe(
-      'https://f4.bcbits.com/img/a0435169997_10.jpg'
-    );
+    expect(playlist.artworkUrl).toBe('https://f4.bcbits.com/img/a0435169997_10.jpg');
     expect(playlist.tracks[0]).toEqual({
       id: '4180305335',
       title: 'Where You Are',
       artists: [],
       artworkUrl: 'https://f4.bcbits.com/img/a0435169997_10.jpg',
       durationMs: 201806,
-      sourceUrl:
-        'https://marcellaandherlovers.bandcamp.com/track/where-you-are-2',
+      sourceUrl: 'https://marcellaandherlovers.bandcamp.com/track/where-you-are-2',
     });
   });
 });

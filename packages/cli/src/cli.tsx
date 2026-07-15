@@ -15,12 +15,11 @@ try {
   const args = parseCliArgs(process.argv.slice(2));
   configureNetwork({
     proxy: args.proxy,
+    usePoToken: args.usePoToken,
     ytCookie: args.ytCookie,
     ytUserAgent: args.ytUserAgent,
   });
-  const dir = path.resolve(
-    process.env.INIT_CWD ?? process.env.PWD ?? process.cwd()
-  );
+  const dir = path.resolve(process.env.INIT_CWD ?? process.env.PWD ?? process.cwd());
   const manifest = !args.url ? await loadManifest(dir) : null;
   const outputDir = path.resolve(args.outputDir ?? dir);
 

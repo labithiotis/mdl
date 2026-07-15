@@ -11,14 +11,18 @@
   "browser": {
     "binding": "BROWSER"
   },
-  "ratelimits": [
-    {
-      "name": "TOKEN_MINT_RATE_LIMITER",
-      "namespace_id": "760291301",
-      "simple": {
-        "limit": 30,
-        "period": 60
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TOKEN_RATE_LIMITER",
+        "class_name": "TokenRateLimiter"
       }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TokenRateLimiter"]
     }
   ],
   "kv_namespaces": [

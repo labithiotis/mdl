@@ -13,16 +13,11 @@ type LoadingScreenProps = {
 
 export function LoadingScreen(props: LoadingScreenProps) {
   const provider = detectProvider(props.url);
-  const providerName =
-    provider === 'unknown' ? 'Checking provider' : formatProviderName(provider);
+  const providerName = provider === 'unknown' ? 'Checking provider' : formatProviderName(provider);
 
   return (
     <Box flexDirection="column" gap={1}>
-      <Panel
-        title={props.title}
-        titleColor={props.titleColor}
-        borderColor={props.borderColor}
-      >
+      <Panel title={props.title} titleColor={props.titleColor} borderColor={props.borderColor}>
         <Spinner type="simpleDots" />
         <Spacer />
         <Text color="cyan">{props.message}</Text>

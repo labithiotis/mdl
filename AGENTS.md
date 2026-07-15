@@ -1,25 +1,20 @@
-You are an expert in TypeScript, Node.js, React, Tailwind CSS.
+Use `./docs/CAVEMAN.md` for thinking and responses.
+Env vars via Varlock (+ GCP Secret Manager).
+New dependencies use the latest compatible release; the repo pins exact versions.
+Use Conventional Commits for branches and commits. Subject under ~70 chars; body only when the why matters.
 
-## Code Style and Structure
+## Routing
 
-Write concise, technical TypeScript code with accurate examples.
-Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
-Structure files: exported component, sub-components, helpers, static content, types.
-Keep inline comments concise and limited for overlay complex code, favour using debug logging to explain what code is doing. Avoid adding huge chunks of commented code explaining the code.
+Load the smallest relevant doc set for the task:
 
-## Naming Conventions
+- Open `./docs/TYPESCRIPT.md` only when editing TypeScript or JavaScript files.
+- Open `./docs/TESTING.md` only when editing tests, mocks, or test infra.
+- Open `./docs/SHELL.md` only when editing shell scripts or `run` files.
+- Open `./docs/GH_WORKFLOWS.md` only when editing `.github/workflows/*`.
 
-Use lowercase for directories and Capitalization only for Class constructor or Components (e.g., components/AuthWizard), for helpers/lib/utils use lowercase.
-Favor named exports for components.
+## Naming
 
-## TypeScript Usage
-
-Use TypeScript for all code; prefer types over interfaces.
-Avoid enums; use maps instead.
-Use functional components with TypeScript types.
-
-## Syntax and Formatting
-
-Use the "function" keyword for pure functions.
-Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
-Use declarative JSX.
+- `camelCase` for directories, files, and the default fallback.
+- `PascalCase` for React components and class constructor files.
+- `UPPER_SNAKE_CASE` for markdown files.
+- Preserve framework-required route filenames.

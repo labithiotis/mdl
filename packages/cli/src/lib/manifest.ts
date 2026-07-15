@@ -3,17 +3,11 @@ import path from 'node:path';
 import { Either } from 'effect';
 import { syncManifestSchema } from './schemas';
 import type { SyncManifest } from './types';
-import {
-  decodeUnknownEither,
-  formatSchemaParseError,
-  ManifestDecodeError,
-} from './utils';
+import { decodeUnknownEither, formatSchemaParseError, ManifestDecodeError } from './utils';
 
 export const MANIFEST_FILE_NAME = '.mdl.json';
 
-export async function loadManifest(
-  directory: string
-): Promise<SyncManifest | null> {
+export async function loadManifest(directory: string): Promise<SyncManifest | null> {
   const manifestPath = path.join(directory, MANIFEST_FILE_NAME);
 
   try {
@@ -30,18 +24,11 @@ export async function loadManifest(
   }
 }
 
-export async function saveManifest(
-  directory: string,
-  manifest: SyncManifest
-): Promise<string> {
+export async function saveManifest(directory: string, manifest: SyncManifest): Promise<string> {
   await mkdir(directory, { recursive: true });
 
   const manifestPath = path.join(directory, MANIFEST_FILE_NAME);
-  await writeFile(
-    manifestPath,
-    `${JSON.stringify(manifest, null, 2)}\n`,
-    'utf8'
-  );
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
   return manifestPath;
 }

@@ -21,21 +21,12 @@ export function WorkerRow({ slot }: WorkerRowProps) {
 
   return (
     <Box gap={1}>
-      {slot.isActive ? (
-        <Spinner type="dots" />
-      ) : (
-        <Text color={color}>{statusGlyph(slot.stage)}</Text>
-      )}
+      {slot.isActive ? <Spinner type="dots" /> : <Text color={color}>{statusGlyph(slot.stage)}</Text>}
       <Text color={color}>{String(slot.trackIndex).padStart(2, '0')}.</Text>
       <Text>{title}</Text>
       <Text color={slot.stage === 'failed' ? 'red' : 'gray'}>{detail}</Text>
       {slot.stage === 'downloading-audio' ? (
-        <ProgressBar
-          color={color}
-          percent={slot.downloadPercent ?? 0}
-          showPercent={false}
-          width={24}
-        />
+        <ProgressBar color={color} percent={slot.downloadPercent ?? 0} showPercent={false} width={24} />
       ) : null}
     </Box>
   );

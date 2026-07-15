@@ -7,10 +7,7 @@ const SPOTIFY_TRACK_ENRICHMENT_CONCURRENCY = 5;
 export class SpotifyProvider implements ProviderOptions {
   public readonly provider = 'spotify';
   public readonly displayName = 'Spotify';
-  public readonly shortLinkHosts = [
-    'spotify.link',
-    'spotify.app.link',
-  ] as const;
+  public readonly shortLinkHosts = ['spotify.link', 'spotify.app.link'] as const;
 
   public matchesUrl(url: URL): boolean {
     const pathname = url.pathname.replace(/\/+$/, '') || '/';
@@ -29,10 +26,7 @@ export class SpotifyProvider implements ProviderOptions {
     );
   }
 
-  public async fetch(
-    url: string,
-    _options: FetchOptions
-  ): Promise<PlaylistMetadata> {
+  public async fetch(url: string, _options: FetchOptions): Promise<PlaylistMetadata> {
     const collectionKind = this.getCollectionKind(url);
     const embedUrl = this.createEmbedUrl(url);
     const response = await fetch(embedUrl, {
@@ -56,17 +50,11 @@ export class SpotifyProvider implements ProviderOptions {
     return playlist;
   }
 
-  public parseCollectionHtml(
-    html: string,
-    sourceUrl: string
-  ): PlaylistMetadata {
+  public parseCollectionHtml(html: string, sourceUrl: string): PlaylistMetadata {
     const entity = this.extractEntity(html);
     const collectionKind = this.getCollectionKind(sourceUrl);
     const owner = this.getEntityOwner(entity);
-    const title =
-      entity.title?.trim() ||
-      entity.name?.trim() ||
-      this.getFallbackCollectionTitle(collectionKind);
+    const title = entity.title?.trim() || entity.name?.trim() || this.getFallbackCollectionTitle(collectionKind);
     const artworkUrl = getFirstNonEmptyString(
       entity.coverArt?.sources?.[0]?.url,
       entity.visualIdentity?.image?.[0]?.url
@@ -98,9 +86,7 @@ export class SpotifyProvider implements ProviderOptions {
   }
 
   private extractEntity(html: string): SpotifyEntity {
-    const payloadMatch = html.match(
-      /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/
-    );
+    const payloadMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
 
     if (!payloadMatch?.[1]) {
       throw new Error('Could not find Spotify collection data in the page.');
@@ -116,16 +102,12 @@ export class SpotifyProvider implements ProviderOptions {
     return entity;
   }
 
-  private normalizeTrackCollection(
-    entity: SpotifyEntity,
-    collectionArtworkUrl?: string
-  ): PlaylistTrack[] {
+  private normalizeTrackCollection(entity: SpotifyEntity, collectionArtworkUrl?: string): PlaylistTrack[] {
     const title = entity.title?.trim() || entity.name?.trim();
     const artists = entity.artists
       ?.map((artist) => artist.name?.trim())
       .filter((artist): artist is string => Boolean(artist));
-    const id =
-      entity.id?.trim() || this.extractId(entity.uri, 'track') || undefined;
+    const id = entity.id?.trim() || this.extractId(entity.uri, 'track') || undefined;
 
     if (!title || !artists?.length || !id) {
       return [];
@@ -138,8 +120,7 @@ export class SpotifyProvider implements ProviderOptions {
         artists,
         album: undefined,
         artworkUrl: collectionArtworkUrl,
-        durationMs:
-          typeof entity.duration === 'number' ? entity.duration : undefined,
+        durationMs: typeof entity.duration === 'number' ? entity.duration : undefined,
         sourceUrl: this.getTrackUrl(entity.uri) ?? this.getTrackUrl(id),
       },
     ];
@@ -166,19 +147,13 @@ export class SpotifyProvider implements ProviderOptions {
       artists,
       album: collectionTitle,
       artworkUrl: collectionArtworkUrl,
-      durationMs:
-        typeof track.duration === 'number' ? track.duration : undefined,
+      durationMs: typeof track.duration === 'number' ? track.duration : undefined,
       sourceUrl: this.getTrackUrl(track.uri),
     };
   }
 
-  private async enrichPlaylistTracks(
-    playlist: PlaylistMetadata
-  ): Promise<PlaylistMetadata> {
-    const trackPageMetadataByUrl = new Map<
-      string,
-      Promise<SpotifyTrackPageMetadata | null>
-    >();
+  private async enrichPlaylistTracks(playlist: PlaylistMetadata): Promise<PlaylistMetadata> {
+    const trackPageMetadataByUrl = new Map<string, Promise<SpotifyTrackPageMetadata | null>>();
     const tracks = await this.mapWithConcurrency(
       playlist.tracks,
       SPOTIFY_TRACK_ENRICHMENT_CONCURRENCY,
@@ -188,8 +163,7 @@ export class SpotifyProvider implements ProviderOptions {
         }
 
         const trackMetadataPromise =
-          trackPageMetadataByUrl.get(track.sourceUrl) ??
-          this.fetchTrackPageMetadata(track.sourceUrl);
+          trackPageMetadataByUrl.get(track.sourceUrl) ?? this.fetchTrackPageMetadata(track.sourceUrl);
 
         if (!trackPageMetadataByUrl.has(track.sourceUrl)) {
           trackPageMetadataByUrl.set(track.sourceUrl, trackMetadataPromise);
@@ -215,9 +189,7 @@ export class SpotifyProvider implements ProviderOptions {
     };
   }
 
-  private async enrichTrackCollection(
-    playlist: PlaylistMetadata
-  ): Promise<PlaylistMetadata> {
+  private async enrichTrackCollection(playlist: PlaylistMetadata): Promise<PlaylistMetadata> {
     const [track] = playlist.tracks;
 
     if (!track?.sourceUrl) {
@@ -242,9 +214,7 @@ export class SpotifyProvider implements ProviderOptions {
     };
   }
 
-  private async fetchTrackPageMetadata(
-    trackUrl: string
-  ): Promise<SpotifyTrackPageMetadata | null> {
+  private async fetchTrackPageMetadata(trackUrl: string): Promise<SpotifyTrackPageMetadata | null> {
     try {
       const response = await fetch(trackUrl, {
         headers: { 'user-agent': 'Mozilla/5.0' },
@@ -262,30 +232,18 @@ export class SpotifyProvider implements ProviderOptions {
 
   private parseTrackPageHtml(html: string): SpotifyTrackPageMetadata {
     const metaEntries = Array.from(
-      html.matchAll(
-        /<meta[^>]+(?:property|name)=["']([^"']+)["'][^>]+content=["']([^"']*)["'][^>]*>/g
-      )
+      html.matchAll(/<meta[^>]+(?:property|name)=["']([^"']+)["'][^>]+content=["']([^"']*)["'][^>]*>/g)
     );
-    const metadata = new Map(
-      metaEntries.map((match) => [match[1], this.decodeHtmlEntities(match[2])])
-    );
-    const description = getFirstNonEmptyString(
-      metadata.get('og:description'),
-      metadata.get('twitter:description')
-    );
+    const metadata = new Map(metaEntries.map((match) => [match[1], this.decodeHtmlEntities(match[2])]));
+    const description = getFirstNonEmptyString(metadata.get('og:description'), metadata.get('twitter:description'));
 
     return {
       album: this.parseAlbumFromDescription(description),
-      artworkUrl: getFirstNonEmptyString(
-        metadata.get('og:image'),
-        metadata.get('twitter:image')
-      ),
+      artworkUrl: getFirstNonEmptyString(metadata.get('og:image'), metadata.get('twitter:image')),
     };
   }
 
-  private parseAlbumFromDescription(
-    description: string | undefined
-  ): string | undefined {
+  private parseAlbumFromDescription(description: string | undefined): string | undefined {
     if (!description) {
       return undefined;
     }
@@ -294,9 +252,7 @@ export class SpotifyProvider implements ProviderOptions {
       .split(' · ')
       .map((segment) => segment.trim())
       .filter(Boolean);
-    const songSegmentIndex = descriptionSegments.findIndex(
-      (segment) => segment.toLowerCase() === 'song'
-    );
+    const songSegmentIndex = descriptionSegments.findIndex((segment) => segment.toLowerCase() === 'song');
 
     if (songSegmentIndex < 2) {
       return undefined;
@@ -306,11 +262,7 @@ export class SpotifyProvider implements ProviderOptions {
   }
 
   private decodeHtmlEntities(value: string): string {
-    return value
-      .replaceAll('&amp;', '&')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&#x27;', "'")
-      .replaceAll('&#39;', "'");
+    return value.replaceAll('&amp;', '&').replaceAll('&quot;', '"').replaceAll('&#x27;', "'").replaceAll('&#39;', "'");
   }
 
   private async mapWithConcurrency<Value, Result>(
@@ -325,18 +277,11 @@ export class SpotifyProvider implements ProviderOptions {
       while (nextIndex < values.length) {
         const currentIndex = nextIndex;
         nextIndex += 1;
-        results[currentIndex] = await mapper(
-          values[currentIndex],
-          currentIndex
-        );
+        results[currentIndex] = await mapper(values[currentIndex], currentIndex);
       }
     }
 
-    await Promise.all(
-      Array.from({ length: Math.min(concurrency, values.length) }, () =>
-        runWorker()
-      )
-    );
+    await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, () => runWorker()));
 
     return results;
   }
@@ -346,25 +291,18 @@ export class SpotifyProvider implements ProviderOptions {
     const collectionId = this.extractId(sourceUrl, collectionKind);
 
     if (!collectionId) {
-      throw new Error(
-        'Could not determine the Spotify collection id from the URL.'
-      );
+      throw new Error('Could not determine the Spotify collection id from the URL.');
     }
 
     return `https://open.spotify.com/embed/${collectionKind}/${collectionId}`;
   }
 
-  private extractId(
-    value: string | undefined,
-    entity: SpotifyCollectionKind
-  ): string | undefined {
+  private extractId(value: string | undefined, entity: SpotifyCollectionKind): string | undefined {
     if (!value) {
       return undefined;
     }
 
-    const match = value.match(
-      new RegExp(`(?:${entity}/|spotify:${entity}:)([A-Za-z0-9]+)`)
-    );
+    const match = value.match(new RegExp(`(?:${entity}/|spotify:${entity}:)([A-Za-z0-9]+)`));
     return match?.[1];
   }
 
@@ -392,15 +330,10 @@ export class SpotifyProvider implements ProviderOptions {
       ?.map((artist) => artist.name?.trim())
       .filter((artist): artist is string => Boolean(artist));
 
-    return getFirstNonEmptyString(
-      entity.subtitle?.trim(),
-      artistNames?.join(', ')
-    );
+    return getFirstNonEmptyString(entity.subtitle?.trim(), artistNames?.join(', '));
   }
 
-  private getFallbackCollectionTitle(
-    collectionKind: SpotifyCollectionKind
-  ): string {
+  private getFallbackCollectionTitle(collectionKind: SpotifyCollectionKind): string {
     const collectionTypeLabelByKind: Record<SpotifyCollectionKind, string> = {
       album: 'Album',
       playlist: 'Playlist',

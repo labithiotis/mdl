@@ -41,17 +41,12 @@ const providerList: ProviderOptions[] = [
 ];
 
 export const providers: Record<Provider, ProviderOptions> = Object.fromEntries(
-  providerList.map((providerOption) => [
-    providerOption.provider,
-    providerOption,
-  ])
+  providerList.map((providerOption) => [providerOption.provider, providerOption])
 ) as Record<Provider, ProviderOptions>;
 
 export const PROVIDER_OPTIONS = providerList;
 
-export const RECOGNIZED_PROVIDERS: Provider[] = PROVIDER_OPTIONS.map(
-  ({ provider }) => provider
-);
+export const RECOGNIZED_PROVIDERS: Provider[] = PROVIDER_OPTIONS.map(({ provider }) => provider);
 
 export function getProvider(provider: Provider): ProviderOptions {
   return providers[provider];
@@ -67,11 +62,7 @@ export function detectProvider(url: string): Provider | 'unknown' {
     return 'unknown';
   }
 
-  return (
-    detectDirectProvider(parsedUrl)?.provider ??
-    detectShortLinkProvider(parsedUrl) ??
-    'unknown'
-  );
+  return detectDirectProvider(parsedUrl)?.provider ?? detectShortLinkProvider(parsedUrl) ?? 'unknown';
 }
 
 export function getProviderUrlValidationError(rawUrl: string): string | null {
@@ -103,9 +94,7 @@ export async function validateProviderUrl(
 
   const parsedUrl = tryParseHttpUrl(rawUrl);
   if (!parsedUrl) {
-    throw new Error(
-      'Invalid URL. Provide a full http:// or https:// music URL.'
-    );
+    throw new Error('Invalid URL. Provide a full http:// or https:// music URL.');
   }
 
   const directMatch = detectDirectProvider(parsedUrl);
@@ -125,9 +114,7 @@ export async function validateProviderUrl(
   const resolvedParsedUrl = tryParseHttpUrl(resolvedUrl);
 
   if (!resolvedParsedUrl) {
-    throw new Error(
-      `Could not resolve the ${formatProviderName(shortLinkProvider)} short link to a valid music URL.`
-    );
+    throw new Error(`Could not resolve the ${formatProviderName(shortLinkProvider)} short link to a valid music URL.`);
   }
 
   const resolvedMatch = detectDirectProvider(resolvedParsedUrl);
@@ -141,9 +128,7 @@ export async function validateProviderUrl(
 }
 
 function detectDirectProvider(url: URL): ProviderMatch | null {
-  const providerOption = PROVIDER_OPTIONS.find((option) =>
-    option.matchesUrl(url)
-  );
+  const providerOption = PROVIDER_OPTIONS.find((option) => option.matchesUrl(url));
 
   if (!providerOption) {
     return null;
@@ -158,10 +143,7 @@ function detectDirectProvider(url: URL): ProviderMatch | null {
 function detectShortLinkProvider(url: URL): Provider | null {
   const hostname = url.hostname.toLowerCase();
 
-  return (
-    PROVIDER_OPTIONS.find((option) => option.shortLinkHosts?.includes(hostname))
-      ?.provider ?? null
-  );
+  return PROVIDER_OPTIONS.find((option) => option.shortLinkHosts?.includes(hostname))?.provider ?? null;
 }
 
 function tryParseHttpUrl(value: string): URL | null {
@@ -237,9 +219,7 @@ async function defaultResolveUrl(url: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Short link request failed with status ${response.status}.`
-    );
+    throw new Error(`Short link request failed with status ${response.status}.`);
   }
 
   if (response.url && response.url !== url) {

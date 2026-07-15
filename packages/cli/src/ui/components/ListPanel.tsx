@@ -26,11 +26,8 @@ export function ListPanel<Item>({
   const scrollRef = useRef<ScrollViewRef>(null);
   const { stdout } = useStdout();
   const [contentHeight, setContentHeight] = useState(0);
-  const [terminalRows, setTerminalRows] = useState(() =>
-    getTerminalRows(stdout)
-  );
-  const calculatedViewportHeight =
-    viewportHeight ?? getViewportHeight(terminalRows, minRows);
+  const [terminalRows, setTerminalRows] = useState(() => getTerminalRows(stdout));
+  const calculatedViewportHeight = viewportHeight ?? getViewportHeight(terminalRows, minRows);
   const isScrollable = contentHeight > calculatedViewportHeight;
 
   useEffect(() => {
@@ -87,9 +84,7 @@ export function ListPanel<Item>({
 
   return (
     <Panel title={title} borderColor={borderColor}>
-      {isScrollable ? (
-        <Text color="gray">Scroll: ↑ ↓ PgUp PgDn Home End</Text>
-      ) : null}
+      {isScrollable ? <Text color="gray">Scroll: ↑ ↓ PgUp PgDn Home End</Text> : null}
       <ScrollView
         ref={scrollRef}
         flexDirection="column"
@@ -109,32 +104,21 @@ export function ListPanel<Item>({
 }
 
 function getViewportHeight(terminalRows: number, minRows: number): number {
-  return Math.max(
-    MIN_VIEWPORT_HEIGHT,
-    Math.min(terminalRows, Math.max(minRows, MIN_VIEWPORT_HEIGHT))
-  );
+  return Math.max(MIN_VIEWPORT_HEIGHT, Math.min(terminalRows, Math.max(minRows, MIN_VIEWPORT_HEIGHT)));
 }
 
-function getTerminalRows(
-  stdout?: { rows?: number | undefined } | null
-): number {
+function getTerminalRows(stdout?: { rows?: number | undefined } | null): number {
   return stdout?.rows ?? process.stdout.rows ?? FALLBACK_TERMINAL_ROWS;
 }
 
-function scrollByClamped(
-  scrollRef: React.RefObject<ScrollViewRef | null>,
-  delta: number
-): void {
+function scrollByClamped(scrollRef: React.RefObject<ScrollViewRef | null>, delta: number): void {
   const scrollView = scrollRef.current;
   if (!scrollView) return;
 
   scrollToClamped(scrollRef, scrollView.getScrollOffset() + delta);
 }
 
-function scrollToClamped(
-  scrollRef: React.RefObject<ScrollViewRef | null>,
-  offset: number
-): void {
+function scrollToClamped(scrollRef: React.RefObject<ScrollViewRef | null>, offset: number): void {
   const scrollView = scrollRef.current;
   if (!scrollView) return;
 

@@ -11,9 +11,7 @@ export type Provider = Schema.Schema.Type<typeof providerSchema>;
 
 export type PlaylistTrack = Schema.Schema.Type<typeof playlistTrackSchema>;
 
-export type PlaylistMetadata = Schema.Schema.Type<
-  typeof playlistMetadataSchema
->;
+export type PlaylistMetadata = Schema.Schema.Type<typeof playlistMetadataSchema>;
 
 export type ManifestTrack = Schema.Schema.Type<typeof manifestTrackSchema>;
 

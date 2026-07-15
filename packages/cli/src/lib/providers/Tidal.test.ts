@@ -16,18 +16,14 @@ describe('tidal', () => {
   </html>
   `;
 
-    expect(
-      provider.parsePlaylistHtml(
-        html,
-        'https://tidal.com/playlist/36ea71a8-445e-41a4-82ab-6628c581535d'
-      )
-    ).toEqual({
-      title: 'Pop Hits',
-      owner: undefined,
-      artworkUrl: 'https://resources.tidal.com/images/example/1080x1080.jpg',
-      sourceUrl:
-        'https://tidal.com/playlist/36ea71a8-445e-41a4-82ab-6628c581535d',
-    });
+    expect(provider.parsePlaylistHtml(html, 'https://tidal.com/playlist/36ea71a8-445e-41a4-82ab-6628c581535d')).toEqual(
+      {
+        title: 'Pop Hits',
+        owner: undefined,
+        artworkUrl: 'https://resources.tidal.com/images/example/1080x1080.jpg',
+        sourceUrl: 'https://tidal.com/playlist/36ea71a8-445e-41a4-82ab-6628c581535d',
+      }
+    );
   });
 
   test('parses Tidal album metadata from public page HTML', () => {
@@ -41,9 +37,7 @@ describe('tidal', () => {
   </html>
   `;
 
-    expect(
-      provider.parsePlaylistHtml(html, 'https://tidal.com/album/102948177')
-    ).toEqual({
+    expect(provider.parsePlaylistHtml(html, 'https://tidal.com/album/102948177')).toEqual({
       title: 'Weezer (Teal Album)',
       owner: undefined,
       artworkUrl: 'https://resources.tidal.com/images/example/1080x1080.jpg',

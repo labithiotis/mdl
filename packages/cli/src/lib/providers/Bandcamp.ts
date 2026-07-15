@@ -11,24 +11,18 @@ export class BandcampProvider implements ProviderOptions {
     const pathname = url.pathname.replace(/\/+$/, '') || '/';
 
     return (
-      ((hostname === 'bandcamp.com' ||
-        hostname === 'www.bandcamp.com' ||
-        hostname.endsWith('.bandcamp.com')) &&
+      ((hostname === 'bandcamp.com' || hostname === 'www.bandcamp.com' || hostname.endsWith('.bandcamp.com')) &&
         [
           /^\/album\/[^/]+(?:\/)?$/i,
           /^\/track\/[^/]+(?:\/)?$/i,
           /^\/[^/]+\/album\/[^/]+(?:\/)?$/i,
           /^\/[^/]+\/playlist\/[^/]+(?:\/)?$/i,
         ].some((pattern) => pattern.test(pathname))) ||
-      (hostname === 'daily.bandcamp.com' &&
-        [/^\/lists\/[^/]+(?:\/)?$/i].some((pattern) => pattern.test(pathname)))
+      (hostname === 'daily.bandcamp.com' && [/^\/lists\/[^/]+(?:\/)?$/i].some((pattern) => pattern.test(pathname)))
     );
   }
 
-  public async fetch(
-    url: string,
-    _options: FetchOptions
-  ): Promise<PlaylistMetadata> {
+  public async fetch(url: string, _options: FetchOptions): Promise<PlaylistMetadata> {
     const response = await fetch(url, {
       headers: {
         'user-agent': 'Mozilla/5.0',
@@ -36,9 +30,7 @@ export class BandcampProvider implements ProviderOptions {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Bandcamp playlist request failed with status ${response.status}.`
-      );
+      throw new Error(`Bandcamp playlist request failed with status ${response.status}.`);
     }
 
     return this.parsePlaylistHtml(await response.text(), url);
@@ -85,17 +77,11 @@ export class BandcampProvider implements ProviderOptions {
 
   private parseAlbumHtml(html: string, sourceUrl: string): PlaylistMetadata {
     const album = this.extractAlbumSchema(html);
-    const collectionArtworkUrl =
-      album.albumRelease?.[0]?.image?.[0]?.trim() ||
-      album.image?.trim() ||
-      undefined;
+    const collectionArtworkUrl = album.albumRelease?.[0]?.image?.[0]?.trim() || album.image?.trim() || undefined;
     const tracks = (album.track?.itemListElement ?? [])
       .map((track) => this.normalizeAlbumTrack(track, collectionArtworkUrl))
       .filter((track): track is PlaylistTrack => track !== null);
-    const albumId = this.extractSchemaPropertyValue(
-      album.albumRelease?.[0]?.additionalProperty,
-      'item_id'
-    );
+    const albumId = this.extractSchemaPropertyValue(album.albumRelease?.[0]?.additionalProperty, 'item_id');
 
     if (!albumId || !album.name) {
       throw new Error('Could not find Bandcamp album metadata in the page.');
@@ -120,21 +106,15 @@ export class BandcampProvider implements ProviderOptions {
     const title = this.extractDailyTitle(html);
     const collectionArtworkUrl = this.extractDailyArtworkUrl(html);
     const tracks = this.extractDailyPlayerInfos(html)
-      .map((playerInfo) =>
-        this.normalizeDailyTrack(playerInfo, collectionArtworkUrl)
-      )
+      .map((playerInfo) => this.normalizeDailyTrack(playerInfo, collectionArtworkUrl))
       .filter((track): track is PlaylistTrack => track !== null);
 
     if (!title) {
-      throw new Error(
-        'Could not find Bandcamp Daily playlist metadata in the page.'
-      );
+      throw new Error('Could not find Bandcamp Daily playlist metadata in the page.');
     }
 
     if (tracks.length === 0) {
-      throw new Error(
-        'No playable tracks were found in the Bandcamp Daily article.'
-      );
+      throw new Error('No playable tracks were found in the Bandcamp Daily article.');
     }
 
     return {
@@ -152,15 +132,9 @@ export class BandcampProvider implements ProviderOptions {
     const track = this.extractTrackSchema(html);
     const trackId =
       this.extractSchemaPropertyValue(track.additionalProperty, 'track_id') ||
-      this.extractSchemaPropertyValue(
-        track.inAlbum?.albumRelease?.[0]?.additionalProperty,
-        'item_id'
-      );
+      this.extractSchemaPropertyValue(track.inAlbum?.albumRelease?.[0]?.additionalProperty, 'item_id');
     const title = track.name?.trim();
-    const artist =
-      track.byArtist?.name?.trim() ||
-      track.publisher?.name?.trim() ||
-      undefined;
+    const artist = track.byArtist?.name?.trim() || track.publisher?.name?.trim() || undefined;
     const artworkUrl = getFirstNonEmptyString(
       Array.isArray(track.image) ? track.image[0] : track.image,
       track.inAlbum?.albumRelease?.[0]?.image?.[0]
@@ -177,8 +151,7 @@ export class BandcampProvider implements ProviderOptions {
       album: track.inAlbum?.name?.trim() || undefined,
       artworkUrl,
       durationMs: this.parseIsoDurationMs(track.duration),
-      sourceUrl:
-        track.mainEntityOfPage?.trim() || track['@id']?.trim() || sourceUrl,
+      sourceUrl: track.mainEntityOfPage?.trim() || track['@id']?.trim() || sourceUrl,
     };
 
     return {
@@ -199,9 +172,7 @@ export class BandcampProvider implements ProviderOptions {
       throw new Error('Could not find Bandcamp playlist data in the page.');
     }
 
-    return JSON.parse(
-      this.decodeHtmlEntities(match[1])
-    ) as BandcampPlaylistBlob;
+    return JSON.parse(this.decodeHtmlEntities(match[1])) as BandcampPlaylistBlob;
   }
 
   private extractDailyPlayerInfos(html: string): BandcampDailyPlayerInfo[] {
@@ -211,31 +182,21 @@ export class BandcampProvider implements ProviderOptions {
       throw new Error('Could not find Bandcamp Daily player data in the page.');
     }
 
-    return JSON.parse(
-      this.decodeHtmlEntities(match[1])
-    ) as BandcampDailyPlayerInfo[];
+    return JSON.parse(this.decodeHtmlEntities(match[1])) as BandcampDailyPlayerInfo[];
   }
 
   private extractDailyTitle(html: string): string | undefined {
-    const match = html.match(
-      /<meta\s+property="og:title"\s+content="([^"]+)"/i
-    );
+    const match = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i);
     return this.decodeHtmlEntities(match?.[1] ?? '').trim() || undefined;
   }
 
   private extractDailyArtworkUrl(html: string): string | undefined {
-    const match = html.match(
-      /<meta\s+property="og:image"\s+content="([^"]+)"/i
-    );
+    const match = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
     return this.decodeHtmlEntities(match?.[1] ?? '').trim() || undefined;
   }
 
   private extractAlbumSchema(html: string): BandcampAlbumSchema {
-    const matches = Array.from(
-      html.matchAll(
-        /<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g
-      )
-    );
+    const matches = Array.from(html.matchAll(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g));
     const schema = matches
       .map((match) => JSON.parse(match[1]) as Record<string, unknown>)
       .find((entry) => entry['@type'] === 'MusicAlbum');
@@ -248,11 +209,7 @@ export class BandcampProvider implements ProviderOptions {
   }
 
   private extractTrackSchema(html: string): BandcampTrackSchema {
-    const matches = Array.from(
-      html.matchAll(
-        /<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g
-      )
-    );
+    const matches = Array.from(html.matchAll(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/g));
     const schema = matches
       .map((match) => JSON.parse(match[1]) as Record<string, unknown>)
       .find((entry) => entry['@type'] === 'MusicRecording');
@@ -293,8 +250,7 @@ export class BandcampProvider implements ProviderOptions {
         collectionArtworkUrl
       ),
       durationMs:
-        typeof featuredTrack.audio_track_duration === 'number' &&
-        Number.isFinite(featuredTrack.audio_track_duration)
+        typeof featuredTrack.audio_track_duration === 'number' && Number.isFinite(featuredTrack.audio_track_duration)
           ? Math.round(featuredTrack.audio_track_duration * 1000)
           : undefined,
       sourceUrl: playerInfo.tralbum_url?.trim() || undefined,
@@ -317,10 +273,7 @@ export class BandcampProvider implements ProviderOptions {
     collectionArtworkUrl?: string
   ): PlaylistTrack | null {
     const title = track.item?.name?.trim();
-    const trackId = this.extractSchemaPropertyValue(
-      track.item?.additionalProperty,
-      'track_id'
-    );
+    const trackId = this.extractSchemaPropertyValue(track.item?.additionalProperty, 'track_id');
 
     if (!title || !trackId) {
       return null;
@@ -332,15 +285,11 @@ export class BandcampProvider implements ProviderOptions {
       artists: [],
       artworkUrl: collectionArtworkUrl,
       durationMs: this.parseIsoDurationMs(track.item?.duration),
-      sourceUrl:
-        track.item?.mainEntityOfPage?.trim() || track.item?.['@id']?.trim(),
+      sourceUrl: track.item?.mainEntityOfPage?.trim() || track.item?.['@id']?.trim(),
     };
   }
 
-  private normalizeTrack(
-    track: BandcampTrack,
-    collectionArtworkUrl?: string
-  ): PlaylistTrack | null {
+  private normalizeTrack(track: BandcampTrack, collectionArtworkUrl?: string): PlaylistTrack | null {
     const title = track.title?.trim();
     const artist = track.artistName?.trim();
 
@@ -353,10 +302,7 @@ export class BandcampProvider implements ProviderOptions {
       title,
       artists: [artist],
       album: track.album?.title?.trim() || undefined,
-      artworkUrl: getFirstNonEmptyString(
-        this.getImageUrl(track.artId),
-        collectionArtworkUrl
-      ),
+      artworkUrl: getFirstNonEmptyString(this.getImageUrl(track.artId), collectionArtworkUrl),
       durationMs:
         typeof track.duration === 'number' && Number.isFinite(track.duration)
           ? Math.round(track.duration * 1000)
@@ -380,12 +326,8 @@ export class BandcampProvider implements ProviderOptions {
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
-      .replace(/&#x([0-9a-f]+);/gi, (_, hex) =>
-        String.fromCodePoint(Number.parseInt(hex, 16))
-      )
-      .replace(/&#(\d+);/g, (_, decimal) =>
-        String.fromCodePoint(Number.parseInt(decimal, 10))
-      );
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+      .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number.parseInt(decimal, 10)));
   }
 
   private extractSchemaPropertyValue(
@@ -398,9 +340,7 @@ export class BandcampProvider implements ProviderOptions {
     name: string
   ): string | undefined {
     const value = properties?.find((property) => property.name === name)?.value;
-    return typeof value === 'number' || typeof value === 'string'
-      ? String(value)
-      : undefined;
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : undefined;
   }
 
   private parseIsoDurationMs(value?: string): number | undefined {
@@ -408,9 +348,7 @@ export class BandcampProvider implements ProviderOptions {
       return undefined;
     }
 
-    const match = value.match(
-      /^P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/i
-    );
+    const match = value.match(/^P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/i);
 
     if (!match) {
       return undefined;

@@ -9,28 +9,20 @@ export async function ensureFfmpegExecutable(): Promise<string> {
   const ffmpegPath = await findBinaryPath('ffmpeg');
 
   if (!ffmpegPath) {
-    throw new Error(
-      'ffmpeg is required but was not found on PATH. Install ffmpeg and try again.'
-    );
+    throw new Error('ffmpeg is required but was not found on PATH. Install ffmpeg and try again.');
   }
 
   return ffmpegPath;
 }
 
 async function findBinaryPath(binaryName: string): Promise<string | null> {
-  const pathEntries = (process.env.PATH ?? '')
-    .split(path.delimiter)
-    .filter(Boolean);
+  const pathEntries = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
   const commonEntries =
     process.platform === 'darwin'
       ? ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin']
       : ['/usr/local/bin', '/usr/bin', '/bin'];
 
-  for (const candidate of new Set(
-    [...pathEntries, ...commonEntries].map((entry) =>
-      path.join(entry, binaryName)
-    )
-  )) {
+  for (const candidate of new Set([...pathEntries, ...commonEntries].map((entry) => path.join(entry, binaryName)))) {
     try {
       await access(candidate);
       return candidate;

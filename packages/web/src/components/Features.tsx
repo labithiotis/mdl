@@ -9,8 +9,7 @@ interface Feature {
 const FEATURES: readonly Feature[] = [
   {
     title: 'No API keys needed',
-    description:
-      'Works out of the box. Just paste a public URL and mdl resolves metadata directly from the page.',
+    description: 'Works out of the box. Just paste a public URL and mdl resolves metadata directly from the page.',
     icon: (
       <svg
         aria-hidden="true"
@@ -30,8 +29,7 @@ const FEATURES: readonly Feature[] = [
   },
   {
     title: 'Smart sync manifests',
-    description:
-      'Saves a .mdl.json manifest next to downloads. Re-run to sync only new tracks without re-downloading.',
+    description: 'Saves a .mdl.json manifest next to downloads. Re-run to sync only new tracks without re-downloading.',
     icon: (
       <svg
         aria-hidden="true"
@@ -51,8 +49,7 @@ const FEATURES: readonly Feature[] = [
   },
   {
     title: 'Parallel downloads',
-    description:
-      'Download up to 10 tracks simultaneously. Configurable concurrency to match your connection speed.',
+    description: 'Download up to 10 tracks simultaneously. Configurable concurrency to match your connection speed.',
     icon: (
       <svg
         aria-hidden="true"
@@ -93,8 +90,7 @@ const FEATURES: readonly Feature[] = [
   },
   {
     title: 'ID3 metadata',
-    description:
-      'Automatically writes track title, artists, album name, and artwork to downloaded audio files.',
+    description: 'Automatically writes track title, artists, album name, and artwork to downloaded audio files.',
     icon: (
       <svg
         aria-hidden="true"
@@ -109,11 +105,7 @@ const FEATURES: readonly Feature[] = [
           strokeLinejoin="round"
           d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"
         />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M6 6h.008v.008H6V6Z"
-        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
       </svg>
     ),
   },
@@ -145,12 +137,9 @@ export function Features() {
     <section className="relative px-6 py-20 md:py-28">
       <div className="mx-auto max-w-5xl">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Built for power users
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Built for power users</h2>
           <p className="mt-4 text-lg text-zinc-400">
-            Everything you need to manage your local music library from the
-            terminal
+            Everything you need to manage your local music library from the terminal
           </p>
         </div>
 
@@ -164,13 +153,7 @@ export function Features() {
   );
 }
 
-function FeatureCard({
-  feature,
-  index,
-}: {
-  readonly feature: Feature;
-  readonly index: number;
-}) {
+function FeatureCard({ feature, index }: { readonly feature: Feature; readonly index: number }) {
   const delayClass = `animation-delay-${(index % 6) * 100}` as string;
 
   return (
@@ -180,12 +163,8 @@ function FeatureCard({
       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400 transition-colors group-hover:bg-violet-500/20 sm:mx-0">
         {feature.icon}
       </div>
-      <h3 className="mb-2 text-lg font-semibold text-zinc-100">
-        {feature.title}
-      </h3>
-      <p className="text-sm leading-relaxed text-zinc-400">
-        {feature.description}
-      </p>
+      <h3 className="mb-2 text-lg font-semibold text-zinc-100">{feature.title}</h3>
+      <p className="text-sm leading-relaxed text-zinc-400">{feature.description}</p>
     </div>
   );
 }

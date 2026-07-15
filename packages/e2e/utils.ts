@@ -5,9 +5,7 @@ import { fileURLToPath } from 'node:url';
 // Timeout the CLI before tests timeout to get error
 const CLI_TIMEOUT_MS = 59_000;
 
-const CLI_ENTRY_PATH = fileURLToPath(
-  new URL('../cli/src/cli.tsx', import.meta.url)
-);
+const CLI_ENTRY_PATH = fileURLToPath(new URL('../cli/src/cli.tsx', import.meta.url));
 
 export type CliRunResult = {
   command: string[];
@@ -38,8 +36,7 @@ export async function runCli(
     timeoutMs?: number;
   }
 ): Promise<CliRunResult> {
-  const cwd =
-    options?.cwd ?? path.resolve(path.dirname(CLI_ENTRY_PATH), '../../..');
+  const cwd = options?.cwd ?? path.resolve(path.dirname(CLI_ENTRY_PATH), '../../..');
   const command = ['bun', 'run', CLI_ENTRY_PATH, ...args];
   const startedAt = Date.now();
   const child = spawn('bun', ['run', CLI_ENTRY_PATH, ...args], {
@@ -83,10 +80,7 @@ export async function runCli(
   return result;
 }
 
-async function waitForProcessExit(
-  child: ReturnType<typeof spawn>,
-  timeoutMs?: number
-): Promise<number | null> {
+async function waitForProcessExit(child: ReturnType<typeof spawn>, timeoutMs?: number): Promise<number | null> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       child.kill('SIGKILL');
@@ -125,9 +119,6 @@ function buildCliRunErrorMessage(result: CliRunResult): string {
 }
 
 export function cleanOutput(string: string): string {
-  const ansiPattern = new RegExp(
-    `${String.fromCharCode(0x1b)}\\[[0-9;?]*[ -/]*[@-~]`,
-    'g'
-  );
+  const ansiPattern = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;?]*[ -/]*[@-~]`, 'g');
   return string.replace(ansiPattern, '').replace(/\r/g, '').trim();
 }

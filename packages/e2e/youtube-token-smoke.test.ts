@@ -7,24 +7,20 @@ import { promisify } from 'node:util';
 import { runCli } from './utils';
 
 const execFileAsync = promisify(execFile);
-const SMOKE_TEST_ALBUM_URL =
-  'https://music.youtube.com/browse/MPREb_j3iQdYVF98Q';
+const SMOKE_TEST_ALBUM_URL = 'https://music.youtube.com/browse/MPREb_j3iQdYVF98Q';
 const MINIMUM_AUDIO_BYTES = 16 * 1024;
 
 test('downloads and validates the first YouTube Music track', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'mdl-youtube-smoke-'));
 
   try {
-    const cliResult = await runCli(
-      ['--output', directory, '--count', '1', SMOKE_TEST_ALBUM_URL],
-      { timeoutMs: 119_000 }
-    );
+    const cliResult = await runCli(['--output', directory, '--count', '1', SMOKE_TEST_ALBUM_URL], {
+      timeoutMs: 119_000,
+    });
     const audioPath = await findFirstAudioFile(directory);
 
     expect(audioPath, cliResult.combinedOutput).toBeTruthy();
-    expect((await stat(audioPath as string)).size).toBeGreaterThan(
-      MINIMUM_AUDIO_BYTES
-    );
+    expect((await stat(audioPath as string)).size).toBeGreaterThan(MINIMUM_AUDIO_BYTES);
 
     const { stdout } = await execFileAsync('ffprobe', [
       '-v',

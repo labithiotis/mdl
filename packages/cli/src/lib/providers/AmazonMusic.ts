@@ -2,8 +2,7 @@ import type { PlaylistMetadata, PlaylistTrack } from '../types';
 import { getFirstNonEmptyString } from '../utils';
 import type { FetchOptions, ProviderOptions } from './Providers';
 
-const AMAZON_BOT_USER_AGENT =
-  'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+const AMAZON_BOT_USER_AGENT = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 
 export class AmazonMusicProvider implements ProviderOptions {
   public readonly provider = 'amazon-music';
@@ -25,10 +24,7 @@ export class AmazonMusicProvider implements ProviderOptions {
     );
   }
 
-  public async fetch(
-    url: string,
-    options: FetchOptions
-  ): Promise<PlaylistMetadata> {
+  public async fetch(url: string, options: FetchOptions): Promise<PlaylistMetadata> {
     const { signal } = options;
     const trackAsin = this.extractTrackAsin(url);
 
@@ -40,62 +36,40 @@ export class AmazonMusicProvider implements ProviderOptions {
     const html = await this.fetchHtml(url, signal);
     const playlist = this.parsePlaylistHtml(html);
 
-    const tracks = await this.mapWithConcurrency<string, PlaylistTrack | null>(
-      playlist.trackAsins,
-      4,
-      async (asin) => {
-        const trackHtml = await this.fetchHtml(
-          `${url}?do=play&trackAsin=${asin}`,
-          signal
-        );
-        const trackPage = this.parseTrackHtml(trackHtml);
-        const artist = trackPage.artistUrl
-          ? await this.getCachedName(
-              this.artistNameCache,
-              trackPage.artistUrl,
-              signal
-            )
-          : undefined;
-        const albumTitle = trackPage.albumUrl
-          ? await this.getCachedName(
-              this.albumTitleCache,
-              trackPage.albumUrl,
-              signal
-            )
-          : undefined;
+    const tracks = await this.mapWithConcurrency<string, PlaylistTrack | null>(playlist.trackAsins, 4, async (asin) => {
+      const trackHtml = await this.fetchHtml(`${url}?do=play&trackAsin=${asin}`, signal);
+      const trackPage = this.parseTrackHtml(trackHtml);
+      const artist = trackPage.artistUrl
+        ? await this.getCachedName(this.artistNameCache, trackPage.artistUrl, signal)
+        : undefined;
+      const albumTitle = trackPage.albumUrl
+        ? await this.getCachedName(this.albumTitleCache, trackPage.albumUrl, signal)
+        : undefined;
 
-        if (!trackPage.title || !artist) {
-          return null;
-        }
-
-        return {
-          id: asin,
-          title: trackPage.title,
-          artists: [artist],
-          album: albumTitle,
-          artworkUrl: getFirstNonEmptyString(
-            trackPage.artworkUrl,
-            playlist.artworkUrl
-          ),
-          durationMs: trackPage.durationMs,
-          sourceUrl: trackPage.sourceUrl,
-        };
+      if (!trackPage.title || !artist) {
+        return null;
       }
-    );
+
+      return {
+        id: asin,
+        title: trackPage.title,
+        artists: [artist],
+        album: albumTitle,
+        artworkUrl: getFirstNonEmptyString(trackPage.artworkUrl, playlist.artworkUrl),
+        durationMs: trackPage.durationMs,
+        sourceUrl: trackPage.sourceUrl,
+      };
+    });
 
     const normalizedTracks = tracks.filter((track) => track !== null);
 
     if (normalizedTracks.length === 0) {
-      throw new Error(
-        `No tracks were found in the Amazon Music ${collectionKind}.`
-      );
+      throw new Error(`No tracks were found in the Amazon Music ${collectionKind}.`);
     }
 
     return {
       id: this.extractPlaylistId(url),
-      title:
-        playlist.title ||
-        `Amazon Music ${collectionKind === 'album' ? 'Album' : 'Playlist'}`,
+      title: playlist.title || `Amazon Music ${collectionKind === 'album' ? 'Album' : 'Playlist'}`,
       owner: playlist.owner,
       artworkUrl: playlist.artworkUrl,
       provider: 'amazon-music',
@@ -104,35 +78,18 @@ export class AmazonMusicProvider implements ProviderOptions {
     };
   }
 
-  private async fetchTrack(
-    sourceUrl: string,
-    trackAsin: string,
-    signal?: AbortSignal
-  ): Promise<PlaylistMetadata> {
-    const trackHtml = await this.fetchHtml(
-      this.buildTrackPlaybackUrl(sourceUrl, trackAsin),
-      signal
-    );
+  private async fetchTrack(sourceUrl: string, trackAsin: string, signal?: AbortSignal): Promise<PlaylistMetadata> {
+    const trackHtml = await this.fetchHtml(this.buildTrackPlaybackUrl(sourceUrl, trackAsin), signal);
     const trackPage = this.parseTrackHtml(trackHtml);
     const artist = trackPage.artistUrl
-      ? await this.getCachedName(
-          this.artistNameCache,
-          trackPage.artistUrl,
-          signal
-        )
+      ? await this.getCachedName(this.artistNameCache, trackPage.artistUrl, signal)
       : undefined;
     const albumTitle = trackPage.albumUrl
-      ? await this.getCachedName(
-          this.albumTitleCache,
-          trackPage.albumUrl,
-          signal
-        )
+      ? await this.getCachedName(this.albumTitleCache, trackPage.albumUrl, signal)
       : undefined;
 
     if (!trackPage.title || !artist) {
-      throw new Error(
-        'Could not find Amazon Music track metadata in the page.'
-      );
+      throw new Error('Could not find Amazon Music track metadata in the page.');
     }
 
     const track: PlaylistTrack = {
@@ -166,9 +123,7 @@ export class AmazonMusicProvider implements ProviderOptions {
     );
 
     if (!title || trackAsins.length === 0) {
-      throw new Error(
-        'Could not find Amazon Music collection metadata in the page.'
-      );
+      throw new Error('Could not find Amazon Music collection metadata in the page.');
     }
 
     return {
@@ -180,23 +135,14 @@ export class AmazonMusicProvider implements ProviderOptions {
   }
 
   public parseTrackHtml(html: string): AmazonTrackPageData {
-    const sourceUrl = this.decodeHtmlAttribute(
-      this.extractMetaProperty(html, 'al:web:url') || ''
-    );
+    const sourceUrl = this.decodeHtmlAttribute(this.extractMetaProperty(html, 'al:web:url') || '');
     const duration = this.extractMetaProperty(html, 'music:duration');
 
     return {
-      albumUrl: this.decodeHtmlAttribute(
-        this.extractMetaProperty(html, 'music:album') || ''
-      ),
-      artistUrl: this.decodeHtmlAttribute(
-        this.extractMetaProperty(html, 'music:musician') || ''
-      ),
+      albumUrl: this.decodeHtmlAttribute(this.extractMetaProperty(html, 'music:album') || ''),
+      artistUrl: this.decodeHtmlAttribute(this.extractMetaProperty(html, 'music:musician') || ''),
       artworkUrl: this.extractMetaProperty(html, 'og:image'),
-      durationMs:
-        duration && Number.isFinite(Number(duration))
-          ? Math.round(Number(duration) * 1000)
-          : undefined,
+      durationMs: duration && Number.isFinite(Number(duration)) ? Math.round(Number(duration) * 1000) : undefined,
       sourceUrl: sourceUrl || undefined,
       title: this.extractMetaProperty(html, 'og:title'),
     };
@@ -214,9 +160,7 @@ export class AmazonMusicProvider implements ProviderOptions {
     }
 
     const html = await this.fetchHtml(normalizedUrl, signal);
-    const name = this.extractMetaProperty(html, 'og:title')
-      ?.split(' – ')[0]
-      ?.trim();
+    const name = this.extractMetaProperty(html, 'og:title')?.split(' – ')[0]?.trim();
 
     if (name) {
       cache.set(normalizedUrl, name);
@@ -234,9 +178,7 @@ export class AmazonMusicProvider implements ProviderOptions {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Amazon Music request failed with status ${response.status}.`
-      );
+      throw new Error(`Amazon Music request failed with status ${response.status}.`);
     }
 
     return response.text();
@@ -244,14 +186,10 @@ export class AmazonMusicProvider implements ProviderOptions {
 
   private extractPlaylistId(sourceUrl: string): string {
     const parsedUrl = new URL(sourceUrl);
-    const match = parsedUrl.pathname.match(
-      /\/(?:albums|user-playlists|playlists)\/([A-Za-z0-9]+)/i
-    );
+    const match = parsedUrl.pathname.match(/\/(?:albums|user-playlists|playlists)\/([A-Za-z0-9]+)/i);
 
     if (!match?.[1]) {
-      throw new Error(
-        'Could not determine the Amazon Music collection id from the URL.'
-      );
+      throw new Error('Could not determine the Amazon Music collection id from the URL.');
     }
 
     return match[1];
@@ -272,22 +210,12 @@ export class AmazonMusicProvider implements ProviderOptions {
   }
 
   private getCollectionKind(sourceUrl: string): 'album' | 'playlist' {
-    return new URL(sourceUrl).pathname.includes('/albums/')
-      ? 'album'
-      : 'playlist';
+    return new URL(sourceUrl).pathname.includes('/albums/') ? 'album' : 'playlist';
   }
 
-  private extractMetaProperty(
-    html: string,
-    property: string
-  ): string | undefined {
+  private extractMetaProperty(html: string, property: string): string | undefined {
     const escapedProperty = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = html.match(
-      new RegExp(
-        `<meta\\s+property="${escapedProperty}"\\s+content="([^"]*)"`,
-        'i'
-      )
-    );
+    const match = html.match(new RegExp(`<meta\\s+property="${escapedProperty}"\\s+content="([^"]*)"`, 'i'));
 
     return match?.[1] ? this.decodeHtmlAttribute(match[1]).trim() : undefined;
   }
@@ -299,12 +227,8 @@ export class AmazonMusicProvider implements ProviderOptions {
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
-      .replace(/&#x([0-9a-f]+);/gi, (_, hex) =>
-        String.fromCodePoint(Number.parseInt(hex, 16))
-      )
-      .replace(/&#(\d+);/g, (_, decimal) =>
-        String.fromCodePoint(Number.parseInt(decimal, 10))
-      );
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+      .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number.parseInt(decimal, 10)));
   }
 
   private async mapWithConcurrency<TInput, TOutput>(
@@ -315,19 +239,13 @@ export class AmazonMusicProvider implements ProviderOptions {
     const results = new Array<TOutput>(values.length);
     let cursor = 0;
 
-    const workers = Array.from(
-      { length: Math.min(concurrency, values.length) },
-      async () => {
-        while (cursor < values.length) {
-          const currentIndex = cursor;
-          cursor += 1;
-          results[currentIndex] = await mapper(
-            values[currentIndex],
-            currentIndex
-          );
-        }
+    const workers = Array.from({ length: Math.min(concurrency, values.length) }, async () => {
+      while (cursor < values.length) {
+        const currentIndex = cursor;
+        cursor += 1;
+        results[currentIndex] = await mapper(values[currentIndex], currentIndex);
       }
-    );
+    });
 
     await Promise.all(workers);
     return results;
