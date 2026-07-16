@@ -16,6 +16,7 @@ type PlayerRequestPayload = {
 type TokenWatcher = { cancel: () => void; promise: Promise<TokenPayload> };
 
 const CACHE_TTL_SECONDS = 60 * 60;
+const COLD_START_TIMEOUT_MS = 10_000;
 const PLAYER_REQUEST_TIMEOUT_MS = 15_000;
 
 export async function mintToken(videoId: string, env: Env): Promise<TokenPayload> {
@@ -26,12 +27,15 @@ export async function mintToken(videoId: string, env: Env): Promise<TokenPayload
   const browserBinding = env.BROWSER as unknown as Parameters<typeof puppeteer.sessions>[0];
   const idleSessions = (await puppeteer.sessions(browserBinding)).filter((session) => !session.connectionId);
   const browser = idleSessions.length
-    ? await puppeteer.connect(browserBinding, idleSessions[0].sessionId)
+    ? await puppeteer
+        .connect(browserBinding, idleSessions[0].sessionId)
+        .catch(() => puppeteer.launch(browserBinding, { keep_alive: 600_000 }))
     : await puppeteer.launch(browserBinding, { keep_alive: 600_000 });
   const page = await browser.newPage();
+  const tokenWatcher = watchForPlayerToken(page);
+  void tokenWatcher.promise.catch(() => undefined);
 
   try {
-    const tokenWatcher = watchForPlayerToken(page);
     await runMintStage('setting viewport', () => page.setViewport({ height: 720, width: 1280 }));
     await runMintStage('loading video page', () =>
       page.goto(`https://www.youtube.com/watch?v=${videoId}`, {
@@ -79,6 +83,7 @@ export async function mintToken(videoId: string, env: Env): Promise<TokenPayload
       );
     }
   } finally {
+    tokenWatcher.cancel();
     await page.close().catch(() => undefined);
     browser.disconnect();
   }
@@ -95,6 +100,7 @@ async function runMintStage<T>(stage: string, action: () => Promise<T>): Promise
 async function mintColdStartToken(): Promise<TokenPayload> {
   const visitorId = crypto.randomUUID().replaceAll('-', '').slice(0, 11);
   const response = await fetch('https://www.youtube.com/sw.js_data', {
+    signal: AbortSignal.timeout(COLD_START_TIMEOUT_MS),
     headers: {
       accept: '*/*',
       'accept-language': 'en-US',

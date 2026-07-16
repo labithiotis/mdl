@@ -18,5 +18,5 @@ Example:
   working-directory: apps/api
   env:
     APP_ENV: beta
-  run: ./run deploy:${APP_ENV}
+  run: ./run "deploy:${APP_ENV}"
 ```

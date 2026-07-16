@@ -8,7 +8,7 @@ import sanitizeFilename from 'sanitize-filename';
 import { Innertube, Log, Platform } from 'youtubei.js';
 import type { AudioFormat, AudioQuality } from './args';
 import { ensureFfmpegExecutable } from './ffmpeg';
-import { getYouTubePoToken, getYouTubeSessionCacheKey, getYouTubeSessionOptions } from './network';
+import { getYouTubePoToken, getYouTubeSessionCacheKey, getYouTubeSessionOptions, type YouTubePoToken } from './network';
 import type { PlaylistTrack } from './types';
 
 type VideoMatch = {
@@ -181,11 +181,12 @@ async function downloadWithYoutubeJs(options: {
   youtubeUrl: string;
   signal?: AbortSignal;
 }): Promise<void> {
+  const poToken = await getYouTubePoToken(extractYouTubeVideoId(options.youtubeUrl)).catch(() => undefined);
   let lastError: unknown;
 
   for (const requestClient of YOUTUBE_DOWNLOAD_CLIENTS) {
     try {
-      await downloadWithYoutubeClient(options, [requestClient]);
+      await downloadWithYoutubeClient(options, [requestClient], poToken);
       return;
     } catch (error) {
       if (!isRetryableYouTubeClientError(error)) throw error;
@@ -205,10 +206,11 @@ async function downloadWithYoutubeClient(
     youtubeUrl: string;
     signal?: AbortSignal;
   },
-  requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][]
+  requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][],
+  poToken?: YouTubePoToken
 ): Promise<void> {
   const ffmpegPath = await ensureFfmpegExecutable();
-  const stream = await resolveAudioStream(options.youtubeUrl, options.audioFormat, requestClients);
+  const stream = await resolveAudioStream(options.youtubeUrl, options.audioFormat, requestClients, poToken);
   const args = buildFfmpegArgs({
     audioFormat: options.audioFormat,
     audioQuality: options.audioQuality,
@@ -269,10 +271,10 @@ async function downloadWithYoutubeClient(
 async function resolveAudioStream(
   youtubeUrl: string,
   audioFormat: AudioFormat,
-  requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][] = YOUTUBE_DOWNLOAD_CLIENTS
+  requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][] = YOUTUBE_DOWNLOAD_CLIENTS,
+  poToken?: YouTubePoToken
 ): Promise<YouTubeAudioStream> {
   const videoId = extractYouTubeVideoId(youtubeUrl);
-  const poToken = await getYouTubePoToken(videoId).catch(() => undefined);
   const client = await getYouTubeClient(poToken);
   const requestedContainer = getRequestedContainer(audioFormat);
   let lastError: unknown = null;

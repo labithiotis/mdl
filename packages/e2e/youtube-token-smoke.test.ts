@@ -22,17 +22,21 @@ test('downloads and validates the first YouTube Music track', async () => {
     expect(audioPath, cliResult.combinedOutput).toBeTruthy();
     expect((await stat(audioPath as string)).size).toBeGreaterThan(MINIMUM_AUDIO_BYTES);
 
-    const { stdout } = await execFileAsync('ffprobe', [
-      '-v',
-      'error',
-      '-select_streams',
-      'a:0',
-      '-show_entries',
-      'stream=codec_type:format=duration',
-      '-of',
-      'json',
-      audioPath as string,
-    ]);
+    const { stdout } = await execFileAsync(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-select_streams',
+        'a:0',
+        '-show_entries',
+        'stream=codec_type:format=duration',
+        '-of',
+        'json',
+        audioPath as string,
+      ],
+      { timeout: 10_000 }
+    );
     const probe = JSON.parse(stdout) as {
       format?: { duration?: string };
       streams?: Array<{ codec_type?: string }>;

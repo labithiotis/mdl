@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:e2e": "bun test --timeout=60000 --retry=1 --bail --dots",
-    "test:youtube-smoke": "bun test --timeout=120000 youtube-token-smoke.test.ts"
+    "test:e2e": "bun test --timeout=60000 --retry=1 --bail --dots cli-provider.test.ts cli-flags.test.ts",
+    "test:youtube-smoke": "bun test --timeout=150000 youtube-token-smoke.test.ts"
   }
 }

@@ -49,14 +49,16 @@ async function enforceRateLimits(request: Request, env: Env): Promise<Response |
   }
 
   const ipAddress = request.headers.get('cf-connecting-ip')?.trim() || 'unknown';
-  const [installationResult, ipResult] = await Promise.all([
-    checkRateLimit(env, `installation:${installationId.toLowerCase()}`, installationLimits),
-    checkRateLimit(env, `ip:${ipAddress}`, ipLimits),
-  ]);
-
+  const installationResult = await checkRateLimit(
+    env,
+    `installation:${installationId.toLowerCase()}`,
+    installationLimits
+  );
   if (!installationResult.success) {
     return createRateLimitResponse(installationResult, 'installation');
   }
+
+  const ipResult = await checkRateLimit(env, `ip:${ipAddress}`, ipLimits);
   return ipResult.success ? null : createRateLimitResponse(ipResult, 'ip');
 }
 
