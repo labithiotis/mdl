@@ -1,7 +1,7 @@
 import { Box, Text, useApp } from 'ink';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { AudioFormat, AudioQuality } from '../lib/args';
-import { setPoTokenWarningHandler } from '../lib/network';
+import { setPoTokenWarningHandler } from '../lib/poToken';
 import { formatProviderName, providers, validateProviderUrl } from '../lib/providers/Providers';
 import { syncPlaylist } from '../lib/sync';
 import type { PlaylistMetadata, SyncManifest } from '../lib/types';

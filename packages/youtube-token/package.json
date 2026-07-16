@@ -1,10 +1,9 @@
 {
-  "name": "@mdl/youtube-token-worker",
+  "name": "@mdl/youtube-token",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc --noEmit",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "test": "bun test src",

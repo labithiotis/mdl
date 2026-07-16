@@ -3,7 +3,7 @@
 HTTP PO token provider for the CLI.
 
 ```sh
-bun run --filter '@mdl/youtube-token-worker' dev
+bun run --filter '@mdl/youtube-token' dev
 ```
 
 The CLI calls:
@@ -22,8 +22,8 @@ Responses use the shape expected by `mdl`:
 }
 ```
 
-Tokens are cached in KV for up to one hour per video ID. Cache misses are
-limited to 30 token mints per minute in each Cloudflare location to protect the
+Tokens are cached in KV for one hour per video ID. Cache misses are limited per
+installation and IP over hourly, daily, and weekly UTC windows to protect the
 Browser Rendering quota.
 
 The worker first bootstraps matching visitor data from YouTube and returns a

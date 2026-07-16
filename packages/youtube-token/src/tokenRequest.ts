@@ -1,7 +1,7 @@
 import type { RateLimitResult, RateLimits } from './rateLimit';
-import { mintToken, type TokenPayload } from './tokenMint';
+import { mintToken, type TokenPayload, tokenTtlSeconds } from './tokenMint';
 
-const CACHE_TTL_SECONDS = 60 * 60;
+const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const installationLimits: RateLimits = { hour: 600, day: 2_000, week: 8_000 };
 const ipLimits: RateLimits = { hour: 1_200, day: 5_000, week: 20_000 };
@@ -16,8 +16,8 @@ export async function handleTokenRequest(request: Request, env: Env): Promise<Re
   }
 
   const videoId = url.searchParams.get('videoId')?.trim();
-  if (!videoId) {
-    return Response.json({ error: 'Missing videoId query parameter.' }, { status: 400 });
+  if (!videoId || !VIDEO_ID_PATTERN.test(videoId)) {
+    return Response.json({ error: 'Missing or invalid videoId query parameter.' }, { status: 400 });
   }
 
   const rateLimitResponse = await enforceRateLimits(request, env);
@@ -29,7 +29,7 @@ export async function handleTokenRequest(request: Request, env: Env): Promise<Re
 
   const token = await mintToken(videoId, env);
   await env.PO_TOKEN_KV.put(cacheKey, JSON.stringify(token), {
-    expirationTtl: CACHE_TTL_SECONDS,
+    expirationTtl: tokenTtlSeconds,
   });
   return Response.json(token, { headers: { 'cache-control': 'no-store' } });
 }

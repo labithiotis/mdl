@@ -8,7 +8,6 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "bun run build && wrangler deploy",
-    "check": "bun run typecheck",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

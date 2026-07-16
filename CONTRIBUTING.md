@@ -22,11 +22,11 @@ Run the same checks expected in pull requests before opening one:
 
 ```bash
 bun lint
-bun check
+bun typecheck
 bun test
 ```
 
-The end-to-end test downloads media and can take several minutes to finish.
+Run `bun test:youtube-smoke` separately to download and validate media.
 
 ## Pull requests
 

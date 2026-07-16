@@ -15,22 +15,19 @@ type PlayerRequestPayload = {
 
 type TokenWatcher = { cancel: () => void; promise: Promise<TokenPayload> };
 
-const CACHE_TTL_SECONDS = 60 * 60;
+export const tokenTtlSeconds = 60 * 60;
 const COLD_START_TIMEOUT_MS = 10_000;
 const PLAYER_REQUEST_TIMEOUT_MS = 15_000;
 
 export async function mintToken(videoId: string, env: Env): Promise<TokenPayload> {
-  console.log('Get a new token for videoId', videoId);
   const coldStartToken = await mintColdStartToken().catch(() => null);
   if (coldStartToken) return coldStartToken;
 
   const browserBinding = env.BROWSER as unknown as Parameters<typeof puppeteer.sessions>[0];
   const idleSessions = (await puppeteer.sessions(browserBinding)).filter((session) => !session.connectionId);
   const browser = idleSessions.length
-    ? await puppeteer
-        .connect(browserBinding, idleSessions[0].sessionId)
-        .catch(() => puppeteer.launch(browserBinding, { keep_alive: 600_000 }))
-    : await puppeteer.launch(browserBinding, { keep_alive: 600_000 });
+    ? await puppeteer.connect(browserBinding, idleSessions[0].sessionId).catch(() => launchBrowser(browserBinding))
+    : await launchBrowser(browserBinding);
   const page = await browser.newPage();
   const tokenWatcher = watchForPlayerToken(page);
   void tokenWatcher.promise.catch(() => undefined);
@@ -38,7 +35,7 @@ export async function mintToken(videoId: string, env: Env): Promise<TokenPayload
   try {
     await runMintStage('setting viewport', () => page.setViewport({ height: 720, width: 1280 }));
     await runMintStage('loading video page', () =>
-      page.goto(`https://www.youtube.com/watch?v=${videoId}`, {
+      page.goto(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`, {
         waitUntil: 'domcontentloaded',
       })
     );
@@ -130,10 +127,18 @@ async function mintColdStartToken(): Promise<TokenPayload> {
   }
 
   return {
-    expiresAt: new Date(Date.now() + CACHE_TTL_SECONDS * 1_000).toISOString(),
+    expiresAt: getTokenExpiresAt(),
     poToken: BG.PoToken.generateColdStartToken(visitorId),
     visitorData,
   };
+}
+
+function launchBrowser(browserBinding: Parameters<typeof puppeteer.sessions>[0]) {
+  return puppeteer.launch(browserBinding, { keep_alive: 600_000 });
+}
+
+function getTokenExpiresAt(): string {
+  return new Date(Date.now() + tokenTtlSeconds * 1_000).toISOString();
 }
 
 async function getPageDiagnostics(page: Page): Promise<Record<string, unknown>> {
@@ -219,7 +224,7 @@ async function readTokenFromPage(page: Page): Promise<TokenPayload | null> {
 
   if (!token?.poToken || !token.visitorData) return null;
   return {
-    expiresAt: new Date(Date.now() + CACHE_TTL_SECONDS * 1_000).toISOString(),
+    expiresAt: getTokenExpiresAt(),
     poToken: token.poToken,
     visitorData: token.visitorData,
   };
@@ -262,7 +267,7 @@ function watchForPlayerToken(page: Page): TokenWatcher {
       if (requestHandler) page.off('request', requestHandler);
       isSettled = true;
       resolve({
-        expiresAt: new Date(Date.now() + CACHE_TTL_SECONDS * 1_000).toISOString(),
+        expiresAt: getTokenExpiresAt(),
         poToken,
         visitorData,
       });

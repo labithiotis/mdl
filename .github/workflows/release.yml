@@ -59,7 +59,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run release checks
-        run: bun check && bun lint && bun test:unit
+        run: bun typecheck && bun lint && bun test:unit
 
       - name: Bump package version
         id: version

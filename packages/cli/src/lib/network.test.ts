@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
-import { configureNetwork, getYouTubePoToken, getYouTubeSessionOptions } from './network';
+import { configureNetwork, getYouTubeSessionOptions } from './network';
+import { configurePoToken, getYouTubePoToken, setPoTokenWarningHandler } from './poToken';
 
 const defaultFetch = globalThis.fetch;
 const installationId = '123e4567-e89b-42d3-a456-426614174000';
 
 afterEach(() => {
   configureNetwork({});
+  configurePoToken({});
   globalThis.fetch = defaultFetch;
   mock.restore();
 });
@@ -24,7 +26,8 @@ describe('network', () => {
       );
     });
 
-    configureNetwork({ installationId });
+    configureNetwork({});
+    configurePoToken({ installationId });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     await expect(getYouTubePoToken('abc123')).resolves.toEqual({
@@ -43,7 +46,8 @@ describe('network', () => {
   });
 
   test('rejects token responses without visitor data', async () => {
-    configureNetwork({ installationId });
+    configureNetwork({});
+    configurePoToken({ installationId });
     globalThis.fetch = mock(
       async () => new Response(JSON.stringify({ poToken: 'po-token-123' }))
     ) as unknown as typeof fetch;
@@ -54,7 +58,8 @@ describe('network', () => {
   test('does not request a token when disabled', async () => {
     const fetchMock = mock(async () => new Response());
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    configureNetwork({ installationId, usePoToken: false });
+    configureNetwork({});
+    configurePoToken({ installationId, usePoToken: false });
 
     await expect(getYouTubePoToken('abc123')).resolves.toBeUndefined();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -72,9 +77,9 @@ describe('network', () => {
         { status: 429 }
       )
     );
-    const { setPoTokenWarningHandler } = await import('./network');
     setPoTokenWarningHandler(warningHandler);
-    configureNetwork({ installationId });
+    configureNetwork({});
+    configurePoToken({ installationId });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     await expect(getYouTubePoToken('abc123')).resolves.toBeUndefined();
@@ -91,9 +96,9 @@ describe('network', () => {
   test('warns only once when parallel requests are rate limited', async () => {
     const warningHandler = mock(() => undefined);
     const fetchMock = mock(async () => Response.json({ error: { message: 'Daily limit reached.' } }, { status: 429 }));
-    const { setPoTokenWarningHandler } = await import('./network');
     setPoTokenWarningHandler(warningHandler);
-    configureNetwork({ installationId });
+    configureNetwork({});
+    configurePoToken({ installationId });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     await Promise.all([getYouTubePoToken('abc123'), getYouTubePoToken('def456'), getYouTubePoToken('ghi789')]);

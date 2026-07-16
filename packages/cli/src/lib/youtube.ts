@@ -8,7 +8,8 @@ import sanitizeFilename from 'sanitize-filename';
 import { Innertube, Log, Platform } from 'youtubei.js';
 import type { AudioFormat, AudioQuality } from './args';
 import { ensureFfmpegExecutable } from './ffmpeg';
-import { getYouTubePoToken, getYouTubeSessionCacheKey, getYouTubeSessionOptions, type YouTubePoToken } from './network';
+import { getYouTubeSessionCacheKey, getYouTubeSessionOptions } from './network';
+import { getYouTubePoToken, type YouTubePoToken } from './poToken';
 import type { PlaylistTrack } from './types';
 
 type VideoMatch = {
@@ -39,6 +40,15 @@ type YouTubeAudioStream = {
 };
 
 type NodeReadableStream = import('node:stream/web').ReadableStream<Uint8Array>;
+
+type YouTubeDownloadOptions = {
+  audioFormat: AudioFormat;
+  audioQuality: AudioQuality;
+  destinationPath: string;
+  onProgress?: (progress: DownloadProgress) => void;
+  signal?: AbortSignal;
+  youtubeUrl: string;
+};
 
 export type DownloadProgress = {
   currentSpeed?: string;
@@ -173,14 +183,7 @@ function scoreVideo(track: PlaylistTrack, video: VideoMatch): number {
   return score;
 }
 
-async function downloadWithYoutubeJs(options: {
-  audioFormat: AudioFormat;
-  audioQuality: AudioQuality;
-  destinationPath: string;
-  onProgress?: (progress: DownloadProgress) => void;
-  youtubeUrl: string;
-  signal?: AbortSignal;
-}): Promise<void> {
+async function downloadWithYoutubeJs(options: YouTubeDownloadOptions): Promise<void> {
   const poToken = await getYouTubePoToken(extractYouTubeVideoId(options.youtubeUrl)).catch(() => undefined);
   let lastError: unknown;
 
@@ -198,14 +201,7 @@ async function downloadWithYoutubeJs(options: {
 }
 
 async function downloadWithYoutubeClient(
-  options: {
-    audioFormat: AudioFormat;
-    audioQuality: AudioQuality;
-    destinationPath: string;
-    onProgress?: (progress: DownloadProgress) => void;
-    youtubeUrl: string;
-    signal?: AbortSignal;
-  },
+  options: YouTubeDownloadOptions,
   requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][],
   poToken?: YouTubePoToken
 ): Promise<void> {
