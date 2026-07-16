@@ -3,8 +3,8 @@ import { mintToken, type TokenPayload, tokenTtlSeconds } from './tokenMint';
 
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const installationLimits: RateLimits = { hour: 600, day: 2_000, week: 8_000 };
-const ipLimits: RateLimits = { hour: 1_200, day: 5_000, week: 20_000 };
+const userLimits: RateLimits = { hour: 600, day: 600, week: 1200 };
+const ipLimits: RateLimits = { hour: 2_400, day: 4_000, week: 4_000 };
 
 export async function handleTokenRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
@@ -49,11 +49,7 @@ async function enforceRateLimits(request: Request, env: Env): Promise<Response |
   }
 
   const ipAddress = request.headers.get('cf-connecting-ip')?.trim() || 'unknown';
-  const installationResult = await checkRateLimit(
-    env,
-    `installation:${installationId.toLowerCase()}`,
-    installationLimits
-  );
+  const installationResult = await checkRateLimit(env, `installation:${installationId.toLowerCase()}`, userLimits);
   if (!installationResult.success) {
     return createRateLimitResponse(installationResult, 'installation');
   }
