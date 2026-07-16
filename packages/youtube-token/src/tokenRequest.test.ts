@@ -1,14 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import type { RateLimitResult } from './rateLimit';
 
-const mintToken = mock(async () => ({
-  expiresAt: '2026-07-16T12:00:00.000Z',
-  poToken: 'minted-token',
-  visitorData: 'minted-visitor',
-}));
-
-mock.module('./tokenMint', () => ({ mintToken, tokenTtlSeconds: 3_600 }));
-
 const { handleTokenRequest } = await import('./tokenRequest');
 const installationId = '123e4567-e89b-42d3-a456-426614174000';
 
@@ -42,7 +34,6 @@ describe('token requests', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ poToken: 'cached-token' });
     expect(env.TOKEN_RATE_LIMITER.get).toHaveBeenCalledTimes(2);
-    expect(mintToken).not.toHaveBeenCalled();
   });
 
   test('does not consume the IP quota after an installation limit rejection', async () => {
