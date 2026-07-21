@@ -64,8 +64,7 @@ describe('amazon-music', () => {
       artistUrl: 'https://music.amazon.com/artists/B01HG4E4LI',
       artworkUrl: 'https://m.media-amazon.com/images/I/track.jpg',
       durationMs: 126000,
-      sourceUrl:
-        'https://music.amazon.com/albums/B09DS56JYZ?trackAsin=B09DS24Z6F',
+      sourceUrl: 'https://music.amazon.com/albums/B09DS56JYZ?trackAsin=B09DS24Z6F',
       title: 'Antarctica [Explicit]',
     });
   });

@@ -22,26 +22,12 @@ export function DoneScreen(props: DoneScreenProps) {
       <Panel title="Finished" borderColor="green" titleColor="green">
         <Box>
           <Text color="greenBright">{props.playlist.title}</Text>
-          {!!props.playlist.owner && (
-            <Text color="gray"> ⦁ {props.playlist.owner}</Text>
-          )}
+          {!!props.playlist.owner && <Text color="gray"> ⦁ {props.playlist.owner}</Text>}
         </Box>
         <Box marginTop={1} gap={2}>
-          <Metric
-            label="Downloaded"
-            tone="green"
-            value={String(props.summary.downloaded)}
-          />
-          <Metric
-            label="Skipped"
-            tone="yellow"
-            value={String(props.summary.skipped)}
-          />
-          <Metric
-            label="Failed"
-            tone="red"
-            value={String(props.summary.failed.length)}
-          />
+          <Metric label="Downloaded" tone="green" value={String(props.summary.downloaded)} />
+          <Metric label="Skipped" tone="yellow" value={String(props.summary.skipped)} />
+          <Metric label="Failed" tone="red" value={String(props.summary.failed.length)} />
           <Metric label="Tracks" tone="cyan" value={String(finalTrackTotal)} />
         </Box>
         <Box marginTop={1}>

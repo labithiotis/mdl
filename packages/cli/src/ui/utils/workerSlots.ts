@@ -3,10 +3,7 @@ import { TITLE_LENGTH } from '../components/WorkerRow';
 import type { WorkerSlotState } from '../types';
 import { trimTrackTitle } from './trimTrackTitle';
 
-export function createWorkerSlots(
-  playlist: PlaylistMetadata,
-  _workerCount: number
-): WorkerSlotState[] {
+export function createWorkerSlots(playlist: PlaylistMetadata, _workerCount: number): WorkerSlotState[] {
   return playlist.tracks.map((track, index) => ({
     downloadPercent: undefined,
     fileName: undefined,
@@ -49,10 +46,7 @@ export function updateWorkerSlots(
     downloadPercent: progress.downloadPercent,
     fileName: progress.fileName,
     fileSizeLabel: progress.fileSizeLabel,
-    isActive:
-      progress.stage !== 'completed' &&
-      progress.stage !== 'failed' &&
-      progress.stage !== 'skipped',
+    isActive: progress.stage !== 'completed' && progress.stage !== 'failed' && progress.stage !== 'skipped',
     message: progress.message,
     stage: progress.stage,
     trackId,

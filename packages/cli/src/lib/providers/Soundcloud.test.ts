@@ -14,21 +14,14 @@ describe('soundcloud', () => {
 </html>
 `;
 
-    const playlist = provider.parsePlaylistHtml(
-      html,
-      'https://soundcloud.com/dj-test/sets/focus-flow'
-    );
+    const playlist = provider.parsePlaylistHtml(html, 'https://soundcloud.com/dj-test/sets/focus-flow');
 
     expect(playlist.provider).toBe('soundcloud');
     expect(playlist.id).toBe('445566');
     expect(playlist.title).toBe('Focus Flow');
     expect(playlist.owner).toBe('DJ Test');
-    expect(playlist.artworkUrl).toBe(
-      'https://i1.sndcdn.com/artworks-playlist.jpg'
-    );
-    expect(playlist.sourceUrl).toBe(
-      'https://soundcloud.com/dj-test/sets/focus-flow'
-    );
+    expect(playlist.artworkUrl).toBe('https://i1.sndcdn.com/artworks-playlist.jpg');
+    expect(playlist.sourceUrl).toBe('https://soundcloud.com/dj-test/sets/focus-flow');
     expect(playlist.tracks).toEqual([
       {
         id: '11',

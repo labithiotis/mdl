@@ -6,6 +6,7 @@ import { parseCliArgs } from './lib/args';
 import { ensureFfmpegExecutable } from './lib/ffmpeg';
 import { loadManifest } from './lib/manifest';
 import { configureNetwork } from './lib/network';
+import { configurePoToken } from './lib/poToken';
 import { CliArgumentError, formatEffectError } from './lib/utils';
 import { App } from './ui/app';
 
@@ -18,9 +19,8 @@ try {
     ytCookie: args.ytCookie,
     ytUserAgent: args.ytUserAgent,
   });
-  const dir = path.resolve(
-    process.env.INIT_CWD ?? process.env.PWD ?? process.cwd()
-  );
+  configurePoToken({ usePoToken: args.usePoToken });
+  const dir = path.resolve(process.env.INIT_CWD ?? process.env.PWD ?? process.cwd());
   const manifest = !args.url ? await loadManifest(dir) : null;
   const outputDir = path.resolve(args.outputDir ?? dir);
 

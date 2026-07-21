@@ -42,10 +42,9 @@
     "url": "git+https://github.com/labithiotis/mdl.git"
   },
   "scripts": {
-    "dev": "bun run src/cli.tsx",
+    "dev": "MDL_YOUTUBE_TOKEN_PROVIDER_URL=http://localhost:8787/token bun run src/cli.tsx",
     "build": "bun build --compile --minify ./src/cli.tsx --outfile release/mdl",
     "build:npm": "bun build --minify --target=node ./src/cli.tsx --outfile release/cli.js",
-    "check": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "bun test src",
     "test:unit": "bun test src"

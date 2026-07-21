@@ -63,9 +63,7 @@ export function Install() {
     <section id="install" className="relative px-6 py-20 md:py-28">
       <div className="mx-auto max-w-4xl">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Get started in seconds
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Get started in seconds</h2>
           <p className="mt-4 text-lg text-zinc-400">
             Requires{' '}
             <a
@@ -99,9 +97,7 @@ export function Install() {
           </div>
 
           <div className="p-6">
-            <p className="mb-4 text-sm text-zinc-400">
-              {currentMethod?.description}
-            </p>
+            <p className="mb-4 text-sm text-zinc-400">{currentMethod?.description}</p>
             <div className="group relative flex items-center rounded-xl bg-zinc-950 px-5 py-4">
               <code className="flex-1 font-mono text-sm text-green-400 sm:text-base">
                 <span className="text-zinc-600">$ </span>
@@ -122,11 +118,7 @@ export function Install() {
                     strokeWidth={2}
                     stroke="currentColor"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m4.5 12.75 6 6 9-13.5"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
                 ) : (
                   <svg
@@ -150,21 +142,15 @@ export function Install() {
         </div>
 
         <div className="mt-12">
-          <h3 className="mb-6 text-center text-xl font-semibold text-zinc-200">
-            Usage examples
-          </h3>
+          <h3 className="mb-6 text-center text-xl font-semibold text-zinc-200">Usage examples</h3>
           <div className="space-y-3">
             {USAGE_EXAMPLES.map((example) => (
               <div
                 key={example.command}
                 className="flex flex-col gap-2 rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-4 sm:flex-row sm:items-center sm:gap-6"
               >
-                <code className="shrink-0 font-mono text-sm text-emerald-400">
-                  $ {example.command}
-                </code>
-                <span className="text-sm text-zinc-500">
-                  {example.description}
-                </span>
+                <code className="shrink-0 font-mono text-sm text-emerald-400">$ {example.command}</code>
+                <span className="text-sm text-zinc-500">{example.description}</span>
               </div>
             ))}
           </div>

@@ -4,20 +4,20 @@
   ],
   "scripts": {
     "prepare": "lefthook install --reset-hooks-path",
-    "fmt": "biome format --write .",
+    "format": "biome format --write .",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "check": "bun run typecheck",
-    "typecheck": "tsc --noEmit -p packages/cli/tsconfig.json",
-    "test": "bun run test && bun run test:e2e",
-    "test:unit": "bun run --filter '@mdlx/cli' test:unit",
-    "test:e2e": "bun run --filter '@mdl/e2e' test:e2e"
+    "typecheck": "bun run --filter '@mdlx/cli' typecheck && bun run --filter '@mdl/web' typecheck && bun run --filter '@mdl/youtube-token' typecheck",
+    "test": "bun run test:unit && bun run test:e2e",
+    "test:unit": "bun run --filter '@mdlx/cli' test:unit && bun run --filter '@mdl/youtube-token' test",
+    "test:e2e": "bun run --filter '@mdl/e2e' test:e2e",
+    "test:youtube-smoke": "bun run --filter '@mdl/e2e' test:youtube-smoke"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.8",
     "@types/bun": "latest",
     "lefthook": "2.1.5",
-    "typescript": "6.0.2"
+    "typescript": "7.0.2"
   },
   "packageManager": "bun@1.3.10",
   "knip": {

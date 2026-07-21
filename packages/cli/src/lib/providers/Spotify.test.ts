@@ -18,17 +18,12 @@ describe('spotify', () => {
 </html>
 `;
 
-    const playlist = provider.parseCollectionHtml(
-      html,
-      'https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18'
-    );
+    const playlist = provider.parseCollectionHtml(html, 'https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18');
 
     expect(playlist.id).toBe('1eJdXVLxLoMWu1TkaeSL18');
     expect(playlist.title).toBe('Kookaburra Sits');
     expect(playlist.owner).toBe('ABC Kids');
-    expect(playlist.artworkUrl).toBe(
-      'https://image-cdn-fa.spotifycdn.com/image/track-art'
-    );
+    expect(playlist.artworkUrl).toBe('https://image-cdn-fa.spotifycdn.com/image/track-art');
     expect(playlist.tracks).toEqual([
       {
         id: '1eJdXVLxLoMWu1TkaeSL18',
@@ -52,10 +47,7 @@ describe('spotify', () => {
 </html>
 `;
 
-    const playlist = provider.parseCollectionHtml(
-      html,
-      'https://open.spotify.com/album/6eUW0wxWtzkFdaEFsTJto6'
-    );
+    const playlist = provider.parseCollectionHtml(html, 'https://open.spotify.com/album/6eUW0wxWtzkFdaEFsTJto6');
 
     expect(playlist.id).toBe('6eUW0wxWtzkFdaEFsTJto6');
     expect(playlist.title).toBe('Whenever You Need Somebody');
@@ -82,15 +74,10 @@ describe('spotify', () => {
 </html>
 `;
 
-    const playlist = provider.parseCollectionHtml(
-      html,
-      'https://open.spotify.com/playlist/37i9dQZF1E37peeAkY9IZs'
-    );
+    const playlist = provider.parseCollectionHtml(html, 'https://open.spotify.com/playlist/37i9dQZF1E37peeAkY9IZs');
 
     expect(playlist.artworkUrl).toBe('https://i.scdn.co/image/playlist-art');
-    expect(playlist.tracks[0]?.artworkUrl).toBe(
-      'https://i.scdn.co/image/playlist-art'
-    );
+    expect(playlist.tracks[0]?.artworkUrl).toBe('https://i.scdn.co/image/playlist-art');
   });
 
   test('enriches playlist tracks with track page artwork and album metadata', async () => {
@@ -124,10 +111,7 @@ describe('spotify', () => {
         )
       );
 
-    const playlist = await provider.fetch(
-      'https://open.spotify.com/playlist/37i9dQZF1E37peeAkY9IZs',
-      {}
-    );
+    const playlist = await provider.fetch('https://open.spotify.com/playlist/37i9dQZF1E37peeAkY9IZs', {});
 
     expect(playlist.artworkUrl).toBe('https://i.scdn.co/image/playlist-art');
     expect(playlist.tracks[0]).toEqual({
@@ -171,10 +155,7 @@ describe('spotify', () => {
         )
       );
 
-    const playlist = await provider.fetch(
-      'https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18',
-      {}
-    );
+    const playlist = await provider.fetch('https://open.spotify.com/track/1eJdXVLxLoMWu1TkaeSL18', {});
 
     expect(playlist).toEqual({
       id: '1eJdXVLxLoMWu1TkaeSL18',
@@ -214,10 +195,7 @@ describe('spotify', () => {
       )
       .mockResolvedValueOnce(new Response('no metadata', { status: 500 }));
 
-    const playlist = await provider.fetch(
-      'https://open.spotify.com/playlist/37i9dQZF1E37peeAkY9IZs',
-      {}
-    );
+    const playlist = await provider.fetch('https://open.spotify.com/playlist/37i9dQZF1E37peeAkY9IZs', {});
 
     expect(playlist.tracks[0]).toEqual({
       id: '4o6BgsqLIBViaGVbx5rbRk',

@@ -39,6 +39,7 @@ export type CliOptions = DownloadCliOptions & {
   trackCount?: number;
   url?: string;
   ytCookie?: string;
+  usePoToken: boolean;
   ytUserAgent?: string;
 };
 
@@ -49,6 +50,7 @@ type ParsedCommanderOptions = {
   output?: string;
   parallel: number;
   proxy?: string;
+  poToken: boolean;
   ytCookie?: string;
   ytUserAgent?: string;
 };
@@ -66,10 +68,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     program.parse(argv, { from: 'user' });
   } catch (error) {
     if (error instanceof CommanderError) {
-      if (
-        error.code === 'commander.helpDisplayed' ||
-        error.code === 'commander.version'
-      ) {
+      if (error.code === 'commander.helpDisplayed' || error.code === 'commander.version') {
         process.exit(0);
       }
 
@@ -86,6 +85,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     audioFormat: options.format,
     audioQuality: options.bitrate,
     downloadParallelism: options.parallel,
+    usePoToken: options.poToken,
     ...(options.output ? { outputDir: options.output } : {}),
     ...(options.proxy ? { proxy: options.proxy } : {}),
     ...(typeof options.count === 'number' ? { trackCount: options.count } : {}),
@@ -98,34 +98,24 @@ export function parseCliArgs(argv: string[]): CliOptions {
 function createCliProgram(): Command {
   return new Command()
     .name('mdl')
-    .description(
-      'Interactive playlist and album downloader for streaming collections -> YouTube audio.'
-    )
+    .description('Interactive playlist and album downloader for streaming collections -> YouTube audio.')
     .usage('[playlist-or-album-url] [options]')
     .helpOption('-h, --help', 'Show this help message.')
     .version(packageJson.version, '-v, --version', 'Show the current version.')
     .argument('[playlist-or-album-url]', 'Playlist or album URL.')
-    .addOption(
-      new Option(
-        '-o, --output <dir>',
-        'Base output directory. Playlist files are stored in a subfolder.'
-      )
-    )
+    .addOption(new Option('-o, --output <dir>', 'Base output directory. Playlist files are stored in a subfolder.'))
     .addOption(
       new Option(
         '-p, --parallel <count>',
         `Number of tracks to download in parallel. Default: ${DEFAULT_DOWNLOAD_PARALLELISM}.`
       )
         .default(DEFAULT_DOWNLOAD_PARALLELISM)
-        .argParser((value: string) =>
-          parsePositiveIntegerArg(value, '--parallel')
-        )
+        .argParser((value: string) => parsePositiveIntegerArg(value, '--parallel'))
     )
     .addOption(
-      new Option(
-        '-c, --count <count>',
-        'Maximum number of tracks to download from the collection.'
-      ).argParser((value: string) => parsePositiveIntegerArg(value, '--count'))
+      new Option('-c, --count <count>', 'Maximum number of tracks to download from the collection.').argParser(
+        (value: string) => parsePositiveIntegerArg(value, '--count')
+      )
     )
     .addOption(
       new Option(
@@ -141,33 +131,18 @@ function createCliProgram(): Command {
         `Output audio quality. Use best, 0-10 VBR, or ${AUDIO_QUALITIES.filter((quality) => quality.endsWith('K')).join(', ')}. Default: ${DEFAULT_AUDIO_QUALITY}.`
       )
         .default(DEFAULT_AUDIO_QUALITY)
-        .argParser((value: string) =>
-          parseAudioQualityArg(normalizeAudioQualityArg(value), '--bitrate')
-        )
+        .argParser((value: string) => parseAudioQualityArg(normalizeAudioQualityArg(value), '--bitrate'))
     )
+    .addOption(new Option('--no-po-token', 'Do not request YouTube Proof of Origin tokens.'))
     .addOption(
-      new Option(
-        '--proxy <url>',
-        'HTTPS/HTTP proxy URL used for provider fetches and YouTube requests.'
-      ).argParser((value: string) => parseProxyArg(value))
-    )
-    .addOption(
-      new Option(
-        '--yt-cookie <cookie>',
-        'YouTube Cookie used for YouTube requests.'
+      new Option('--proxy <url>', 'HTTPS/HTTP proxy URL used for provider fetches and YouTube requests.').argParser(
+        (value: string) => parseProxyArg(value)
       )
     )
-    .addOption(
-      new Option(
-        '--yt-user-agent <value>',
-        'YouTube User-Agent header used for YouTube requests.'
-      )
-    )
+    .addOption(new Option('--yt-cookie <cookie>', 'YouTube Cookie used for YouTube requests.'))
+    .addOption(new Option('--yt-user-agent <value>', 'YouTube User-Agent header used for YouTube requests.'))
     .addHelpText('before', 'mdl (MusicDownLoader)\n\n')
-    .addHelpText(
-      'after',
-      `\nProviders:\n  ${PROVIDERS.join(', ')}.\n  Audio downloads currently come from YouTube.\n`
-    )
+    .addHelpText('after', `\nProviders:\n  ${PROVIDERS.join(', ')}.\n  Audio downloads currently come from YouTube.\n`)
     .exitOverride()
     .configureOutput({
       writeOut: (str: string) => process.stdout.write(str),
@@ -178,12 +153,7 @@ function createCliProgram(): Command {
 function parsePositiveIntegerArg(value: string, flagName: string): number {
   const parsed = Number.parseInt(value, 10);
 
-  if (
-    !Number.isInteger(parsed) ||
-    Number.isNaN(parsed) ||
-    parsed <= 0 ||
-    parsed.toString() !== value
-  ) {
+  if (!Number.isInteger(parsed) || Number.isNaN(parsed) || parsed <= 0 || parsed.toString() !== value) {
     throw new CliArgumentError({
       message: `${flagName} must be a positive integer.`,
     });
@@ -204,29 +174,19 @@ function parseAudioFormatArg(value: string, flagName: string): AudioFormat {
   });
 }
 
-function normalizeCommanderError(
-  program: Command,
-  error: CommanderError,
-  argv: string[]
-): Error {
+function normalizeCommanderError(program: Command, error: CommanderError, argv: string[]): Error {
   if (error.code === 'commander.excessArguments') {
     const positionalArgs = argv.filter((token) => !token.startsWith('-'));
     const unexpectedArg = positionalArgs[1];
     return new CliArgumentError({
-      message: formatUnexpectedArgumentMessage(
-        program,
-        unexpectedArg ?? error.message
-      ),
+      message: formatUnexpectedArgumentMessage(program, unexpectedArg ?? error.message),
     });
   }
 
   if (error.code === 'commander.unknownOption') {
     const unexpectedToken = argv.find((token) => token.startsWith('-'));
     return new CliArgumentError({
-      message: formatUnexpectedArgumentMessage(
-        program,
-        unexpectedToken ?? error.message
-      ),
+      message: formatUnexpectedArgumentMessage(program, unexpectedToken ?? error.message),
     });
   }
 
@@ -237,17 +197,13 @@ function normalizeCommanderError(
   }
 
   if (error.code === 'commander.optionMissingArgument') {
-    const matchedFlags = error.message.match(
-      /option '([^']+)' argument missing/
-    );
+    const matchedFlags = error.message.match(/option '([^']+)' argument missing/);
     const normalizedFlag =
       matchedFlags?.[1]
         ?.split(',')
         .map((value) => value.trim().split(' ')[0])
         .find((value) => value.startsWith('--')) ??
-      matchedFlags?.[1]
-        ?.split(',')
-        .map((value) => value.trim().split(' ')[0])[0] ??
+      matchedFlags?.[1]?.split(',').map((value) => value.trim().split(' ')[0])[0] ??
       '--option';
 
     return new CliArgumentError({
@@ -270,15 +226,10 @@ function parseAudioQualityArg(value: string, flagName: string): AudioQuality {
   });
 }
 
-function formatUnexpectedArgumentMessage(
-  program: Command,
-  argument: string
-): string {
+function formatUnexpectedArgumentMessage(program: Command, argument: string): string {
   const help = program.createHelp();
   const supportedArgs = [
-    ...program.registeredArguments.map((registeredArgument) =>
-      help.argumentTerm(registeredArgument)
-    ),
+    ...program.registeredArguments.map((registeredArgument) => help.argumentTerm(registeredArgument)),
     ...help.visibleOptions(program).map((option) => help.optionTerm(option)),
   ]
     .map((value) => `  ${value}`)

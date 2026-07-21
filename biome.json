@@ -5,11 +5,21 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["packages/**/*.ts", "packages/**/*.tsx", "*.json", "*.md"]
+    "includes": [
+      "packages/**/*.ts",
+      "packages/**/*.tsx",
+      "*.json",
+      "*.md",
+      "!**/.wrangler",
+      "!**/.output",
+      "!**/dist",
+      "!**/build"
+    ]
   },
   "formatter": {
     "enabled": true,
-    "indentStyle": "space"
+    "indentStyle": "space",
+    "lineWidth": 120
   },
   "linter": {
     "enabled": true,

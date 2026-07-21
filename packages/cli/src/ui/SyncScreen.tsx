@@ -23,31 +23,13 @@ export function SyncScreen(props: SyncScreenProps) {
       <Panel title="Playlist" titleColor="magenta" borderColor="magenta">
         <Box>
           <Text color="greenBright">{props.playlist.title}</Text>
-          {!!props.playlist.owner && (
-            <Text color="gray"> ⦁ {props.playlist.owner}</Text>
-          )}
+          {!!props.playlist.owner && <Text color="gray"> ⦁ {props.playlist.owner}</Text>}
         </Box>
         <Box marginTop={1} gap={1}>
-          <Metric
-            label="Done"
-            tone="green"
-            value={String(progress?.downloaded ?? 0)}
-          />
-          <Metric
-            label="Skipped"
-            tone="yellow"
-            value={String(progress?.skipped ?? 0)}
-          />
-          <Metric
-            label="Failed"
-            tone="red"
-            value={String(progress?.failed ?? 0)}
-          />
-          <Metric
-            label="Tracks"
-            tone="cyan"
-            value={`${progress?.total ?? props.playlist.tracks.length}`}
-          />
+          <Metric label="Done" tone="green" value={String(progress?.downloaded ?? 0)} />
+          <Metric label="Skipped" tone="yellow" value={String(progress?.skipped ?? 0)} />
+          <Metric label="Failed" tone="red" value={String(progress?.failed ?? 0)} />
+          <Metric label="Tracks" tone="cyan" value={`${progress?.total ?? props.playlist.tracks.length}`} />
         </Box>
         <Box marginTop={1}>
           <Text color="gray" italic underline>

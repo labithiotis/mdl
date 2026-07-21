@@ -23,20 +23,16 @@ describe('apple-music', () => {
     expect(playlist.id).toBe('pl.test');
     expect(playlist.title).toBe('New Music Daily');
     expect(playlist.owner).toBe('Apple Music');
-    expect(playlist.artworkUrl).toBe(
-      'https://is1-ssl.mzstatic.com/image/thumb/Features/v4/test/1200x1200SC.DN01.jpg'
-    );
+    expect(playlist.artworkUrl).toBe('https://is1-ssl.mzstatic.com/image/thumb/Features/v4/test/1200x1200SC.DN01.jpg');
     expect(playlist.tracks).toHaveLength(2);
     expect(playlist.tracks[0]).toEqual({
       id: '1868862384',
       title: 'SWIM',
       artists: ['BTS'],
       album: 'ARIRANG',
-      artworkUrl:
-        'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/test/1200x1200bb.jpg',
+      artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/test/1200x1200bb.jpg',
       durationMs: 159008,
-      sourceUrl:
-        'https://music.apple.com/us/album/swim/1868862375?i=1868862384',
+      sourceUrl: 'https://music.apple.com/us/album/swim/1868862375?i=1868862384',
     });
   });
 
@@ -63,11 +59,9 @@ describe('apple-music', () => {
       title: 'Never Gonna Give You Up',
       artists: ['Rick Astley'],
       album: 'Whenever You Need Somebody',
-      artworkUrl:
-        'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/track/1200x1200bb.jpg',
+      artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/track/1200x1200bb.jpg',
       durationMs: 213000,
-      sourceUrl:
-        'https://music.apple.com/us/album/never-gonna-give-you-up/1440837083?i=1440837084',
+      sourceUrl: 'https://music.apple.com/us/album/never-gonna-give-you-up/1440837083?i=1440837084',
     });
   });
 
@@ -81,10 +75,7 @@ describe('apple-music', () => {
 </html>
 `;
 
-    const playlist = provider.parsePlaylistHtml(
-      html,
-      'https://music.apple.com/us/playlist/new-music-daily/pl.test'
-    );
+    const playlist = provider.parsePlaylistHtml(html, 'https://music.apple.com/us/playlist/new-music-daily/pl.test');
 
     expect(playlist.tracks[0]?.artworkUrl).toBe(
       'https://is1-ssl.mzstatic.com/image/thumb/Features/v4/test/1200x1200SC.DN01.jpg'

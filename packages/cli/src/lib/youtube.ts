@@ -5,10 +5,11 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
 import sanitizeFilename from 'sanitize-filename';
-import { Innertube, Log } from 'youtubei.js';
+import { Innertube, Log, Platform } from 'youtubei.js';
 import type { AudioFormat, AudioQuality } from './args';
 import { ensureFfmpegExecutable } from './ffmpeg';
-import { getYouTubeSessionOptions } from './network';
+import { getYouTubeSessionCacheKey, getYouTubeSessionOptions } from './network';
+import { getYouTubePoToken, type YouTubePoToken } from './poToken';
 import type { PlaylistTrack } from './types';
 
 type VideoMatch = {
@@ -40,6 +41,15 @@ type YouTubeAudioStream = {
 
 type NodeReadableStream = import('node:stream/web').ReadableStream<Uint8Array>;
 
+type YouTubeDownloadOptions = {
+  audioFormat: AudioFormat;
+  audioQuality: AudioQuality;
+  destinationPath: string;
+  onProgress?: (progress: DownloadProgress) => void;
+  signal?: AbortSignal;
+  youtubeUrl: string;
+};
+
 export type DownloadProgress = {
   currentSpeed?: string;
   eta?: string;
@@ -51,26 +61,22 @@ const execFileAsync = promisify(execFile);
 const YOUTUBE_SEARCH_RESULT_COUNT = 5;
 const YOUTUBE_DOWNLOAD_CLIENTS = ['ANDROID', 'MWEB', 'WEB'] as const;
 let youtubeClientPromise: Promise<Innertube> | null = null;
+let youtubeClientSessionKey = '';
 
 Log.setLevel(Log.Level.ERROR);
+Platform.shim.eval = async (data) => new Function(data.output)();
 
-export async function searchYoutubeTrack(
-  track: PlaylistTrack
-): Promise<VideoMatch> {
+export async function searchYoutubeTrack(track: PlaylistTrack): Promise<VideoMatch> {
   const [candidate] = await searchYoutubeTrackCandidates(track);
 
   if (!candidate) {
-    throw new Error(
-      `No YouTube match found for ${track.artists.join(', ')} - ${track.title}.`
-    );
+    throw new Error(`No YouTube match found for ${track.artists.join(', ')} - ${track.title}.`);
   }
 
   return candidate;
 }
 
-export async function searchYoutubeTrackCandidates(
-  track: PlaylistTrack
-): Promise<VideoMatch[]> {
+export async function searchYoutubeTrackCandidates(track: PlaylistTrack): Promise<VideoMatch[]> {
   const query = `${track.artists.join(', ')} - ${track.title} audio`;
   const result = await searchYouTube(query);
   const candidates = result.videos
@@ -78,9 +84,7 @@ export async function searchYoutubeTrackCandidates(
     .sort((left, right) => scoreVideo(track, right) - scoreVideo(track, left));
 
   if (candidates.length === 0) {
-    throw new Error(
-      `No YouTube match found for ${track.artists.join(', ')} - ${track.title}.`
-    );
+    throw new Error(`No YouTube match found for ${track.artists.join(', ')} - ${track.title}.`);
   }
 
   return candidates;
@@ -171,10 +175,7 @@ function scoreVideo(track: PlaylistTrack, video: VideoMatch): number {
   if (!haystack.includes('live')) score += 1;
   if (!haystack.includes('cover')) score += 1;
 
-  if (
-    typeof track.durationMs === 'number' &&
-    typeof video.seconds === 'number'
-  ) {
+  if (typeof track.durationMs === 'number' && typeof video.seconds === 'number') {
     const delta = Math.abs(track.durationMs / 1000 - video.seconds);
     score += Math.max(0, 10 - delta / 5);
   }
@@ -182,19 +183,30 @@ function scoreVideo(track: PlaylistTrack, video: VideoMatch): number {
   return score;
 }
 
-async function downloadWithYoutubeJs(options: {
-  audioFormat: AudioFormat;
-  audioQuality: AudioQuality;
-  destinationPath: string;
-  onProgress?: (progress: DownloadProgress) => void;
-  youtubeUrl: string;
-  signal?: AbortSignal;
-}): Promise<void> {
+async function downloadWithYoutubeJs(options: YouTubeDownloadOptions): Promise<void> {
+  const poToken = await getYouTubePoToken(extractYouTubeVideoId(options.youtubeUrl)).catch(() => undefined);
+  let lastError: unknown;
+
+  for (const requestClient of YOUTUBE_DOWNLOAD_CLIENTS) {
+    try {
+      await downloadWithYoutubeClient(options, [requestClient], poToken);
+      return;
+    } catch (error) {
+      if (!isRetryableYouTubeClientError(error)) throw error;
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+async function downloadWithYoutubeClient(
+  options: YouTubeDownloadOptions,
+  requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][],
+  poToken?: YouTubePoToken
+): Promise<void> {
   const ffmpegPath = await ensureFfmpegExecutable();
-  const stream = await resolveAudioStream(
-    options.youtubeUrl,
-    options.audioFormat
-  );
+  const stream = await resolveAudioStream(options.youtubeUrl, options.audioFormat, requestClients, poToken);
   const args = buildFfmpegArgs({
     audioFormat: options.audioFormat,
     audioQuality: options.audioQuality,
@@ -205,9 +217,7 @@ async function downloadWithYoutubeJs(options: {
     signal: options.signal,
     windowsHide: true,
   });
-  const inputStream = Readable.fromWeb(
-    stream.stream as unknown as NodeReadableStream
-  );
+  const inputStream = Readable.fromWeb(stream.stream as unknown as NodeReadableStream);
 
   if (!child.stdin) {
     inputStream.destroy();
@@ -221,14 +231,9 @@ async function downloadWithYoutubeJs(options: {
       eta: progress.eta,
       percent:
         typeof stream.contentLength === 'number' && stream.contentLength > 0
-          ? Math.min(
-              100,
-              (progress.totalSizeBytes / stream.contentLength) * 100
-            )
+          ? Math.min(100, (progress.totalSizeBytes / stream.contentLength) * 100)
           : undefined,
-      totalSize:
-        formatBytes(stream.contentLength) ||
-        formatBytes(progress.totalSizeBytes),
+      totalSize: formatBytes(stream.contentLength) || formatBytes(progress.totalSizeBytes),
     });
   });
 
@@ -261,18 +266,21 @@ async function downloadWithYoutubeJs(options: {
 
 async function resolveAudioStream(
   youtubeUrl: string,
-  audioFormat: AudioFormat
+  audioFormat: AudioFormat,
+  requestClients: readonly (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number][] = YOUTUBE_DOWNLOAD_CLIENTS,
+  poToken?: YouTubePoToken
 ): Promise<YouTubeAudioStream> {
   const videoId = extractYouTubeVideoId(youtubeUrl);
-  const client = await getYouTubeClient();
+  const client = await getYouTubeClient(poToken);
   const requestedContainer = getRequestedContainer(audioFormat);
   let lastError: unknown = null;
 
-  for (const requestClient of YOUTUBE_DOWNLOAD_CLIENTS) {
+  for (const requestClient of requestClients) {
     const requestOptions = {
       client: requestClient,
       type: 'audio' as const,
       format: requestedContainer,
+      ...(poToken ? { po_token: poToken.poToken } : {}),
     };
 
     try {
@@ -291,15 +299,10 @@ async function resolveAudioStream(
     }
   }
 
-  throw (
-    lastError ??
-    new Error(`Unable to resolve an audio stream for ${youtubeUrl}.`)
-  );
+  throw lastError ?? new Error(`Unable to resolve an audio stream for ${youtubeUrl}.`);
 }
 
-export function getRequestedContainer(
-  audioFormat: AudioFormat
-): 'mp4' | 'webm' {
+export function getRequestedContainer(audioFormat: AudioFormat): 'mp4' | 'webm' {
   return audioFormat === 'opus' ? 'webm' : 'mp4';
 }
 
@@ -314,7 +317,10 @@ export function isRetryableYouTubeClientError(error: unknown): boolean {
 
   return (
     isStreamingDataUnavailableError(error) ||
-    normalizedMessage.includes('login required')
+    normalizedMessage.includes('login required') ||
+    normalizedMessage.includes('no valid url to decipher') ||
+    normalizedMessage.includes('server responded with a non 2xx status code') ||
+    normalizedMessage.includes('audio stream request failed with status 403')
   );
 }
 
@@ -324,51 +330,56 @@ async function resolveAudioStreamForClient(params: {
     client: (typeof YOUTUBE_DOWNLOAD_CLIENTS)[number];
     type: 'audio';
     format: 'mp4' | 'webm';
+    po_token?: string;
   };
   requestedContainer: 'mp4' | 'webm';
   videoId: string;
 }): Promise<YouTubeAudioStream> {
   try {
-    const selected = await params.client.getStreamingData(
-      params.videoId,
-      params.requestOptions
-    );
-    const downloadStream = await params.client.download(
-      params.videoId,
-      params.requestOptions
-    );
+    const selected = await params.client.getStreamingData(params.videoId, params.requestOptions);
+    const downloadStream = await fetchYouTubeAudioStream(selected.url);
     const mimeType = String(selected.mime_type);
     const format = mimeType.includes('webm') ? 'webm' : 'mp4';
 
     return {
-      contentLength:
-        typeof selected.content_length === 'number'
-          ? selected.content_length
-          : undefined,
+      contentLength: typeof selected.content_length === 'number' ? selected.content_length : undefined,
       format,
       mimeType,
       stream: downloadStream,
     };
   } catch (error) {
-    if (!isStreamingDataUnavailableError(error)) {
-      throw error;
-    }
-
-    // Some videos no longer expose decipherable streaming metadata for the
-    // chosen client, but download() can still provide a readable audio stream.
-    const downloadStream = await params.client.download(
-      params.videoId,
-      params.requestOptions
-    );
+    if (!isRetryableYouTubeClientError(error)) throw error;
 
     return {
       contentLength: undefined,
       format: params.requestedContainer,
-      mimeType:
-        params.requestedContainer === 'webm' ? 'audio/webm' : 'audio/mp4',
-      stream: downloadStream,
+      mimeType: params.requestedContainer === 'webm' ? 'audio/webm' : 'audio/mp4',
+      stream: await params.client.download(params.videoId, params.requestOptions),
     };
   }
+}
+
+async function fetchYouTubeAudioStream(url: string | undefined): Promise<ReadableStream<Uint8Array>> {
+  if (!url) throw new Error('YouTube did not provide a deciphered audio URL.');
+
+  const streamUrl = new URL(url);
+  streamUrl.searchParams.set('cpn', crypto.randomUUID().replaceAll('-', '').slice(0, 16));
+  const response = await fetch(streamUrl, {
+    headers: {
+      accept: '*/*',
+      dnt: '1',
+      origin: 'https://www.youtube.com',
+      referer: 'https://www.youtube.com',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`YouTube audio stream request failed with status ${response.status}.`);
+  }
+
+  if (!response.body) throw new Error('YouTube audio stream response had no body.');
+
+  return response.body;
 }
 
 function buildFfmpegArgs(params: {
@@ -394,10 +405,7 @@ function buildFfmpegArgs(params: {
   if (params.audioQuality !== 'best') {
     if (/^\d+K$/i.test(params.audioQuality)) {
       args.push('-b:a', params.audioQuality);
-    } else if (
-      /^\d+$/.test(params.audioQuality) &&
-      params.audioFormat === 'mp3'
-    ) {
+    } else if (/^\d+$/.test(params.audioQuality) && params.audioFormat === 'mp3') {
       args.push('-q:a', params.audioQuality);
     }
   }
@@ -430,9 +438,7 @@ type FfmpegProgress = {
   totalSizeBytes: number;
 };
 
-function createFfmpegProgressParser(
-  onProgress: (progress: FfmpegProgress) => void
-): (chunk: string) => void {
+function createFfmpegProgressParser(onProgress: (progress: FfmpegProgress) => void): (chunk: string) => void {
   let buffer = '';
   const currentProgress: FfmpegProgress = { totalSizeBytes: 0 };
 
@@ -499,8 +505,7 @@ function parseDurationSeconds(value?: string): number | undefined {
     return undefined;
   }
 
-  const [hours, minutes, seconds] =
-    parts.length === 3 ? parts : [0, parts[0], parts[1]];
+  const [hours, minutes, seconds] = parts.length === 3 ? parts : [0, parts[0], parts[1]];
 
   return (hours * 60 + minutes) * 60 + seconds;
 }
@@ -522,8 +527,14 @@ function formatBytes(value?: number): string | undefined {
   return `${Math.round(size * 10) / 10} ${units[unitIndex]}`;
 }
 
-async function getYouTubeClient(): Promise<Innertube> {
-  youtubeClientPromise ??= Innertube.create(getYouTubeSessionOptions());
+async function getYouTubeClient(poToken?: { poToken: string; visitorData?: string }): Promise<Innertube> {
+  const sessionKey = getYouTubeSessionCacheKey(poToken);
+
+  if (!youtubeClientPromise || youtubeClientSessionKey !== sessionKey) {
+    youtubeClientSessionKey = sessionKey;
+    youtubeClientPromise = Innertube.create(getYouTubeSessionOptions(poToken));
+  }
+
   return youtubeClientPromise;
 }
 

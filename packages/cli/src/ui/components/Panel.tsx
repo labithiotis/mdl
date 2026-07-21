@@ -7,21 +7,9 @@ type PanelProps = {
   titleColor?: TextProps['color'];
 } & BoxProps;
 
-export function Panel({
-  title,
-  titleColor = 'magentaBright',
-  children,
-  ...props
-}: PanelProps) {
+export function Panel({ title, titleColor = 'magentaBright', children, ...props }: PanelProps) {
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="gray"
-      paddingX={1}
-      paddingY={0}
-      {...props}
-    >
+    <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} paddingY={0} {...props}>
       <Text color={titleColor} bold>
         {title}
       </Text>

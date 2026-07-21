@@ -13,9 +13,8 @@ export function Hero() {
         </h1>
 
         <p className="animate-fade-in-up animation-delay-200 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400 md:text-xl">
-          Paste a URL from any major streaming service. mdl resolves the
-          metadata, finds the audio on YouTube, and downloads your tracks
-          locally. No API keys needed.
+          Paste a URL from any major streaming service. mdl resolves the metadata, finds the audio on YouTube, and
+          downloads your tracks locally. No API keys needed.
         </p>
 
         <div className="animate-fade-in-up animation-delay-300 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -32,11 +31,7 @@ export function Hero() {
               strokeWidth={2}
               stroke="currentColor"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
             </svg>
           </a>
           <a

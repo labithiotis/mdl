@@ -19,21 +19,12 @@ export function UrlInput(props: UrlInputProps) {
 
   useEffect(() => {
     setCursorState((previousCursorState) => ({
-      cursorOffset: Math.min(
-        previousCursorState.cursorOffset,
-        props.value.length
-      ),
+      cursorOffset: Math.min(previousCursorState.cursorOffset, props.value.length),
     }));
   }, [props.value]);
 
   useInput((input, key) => {
-    if (
-      key.upArrow ||
-      key.downArrow ||
-      (key.ctrl && input === 'c') ||
-      key.tab ||
-      (key.shift && key.tab)
-    ) {
+    if (key.upArrow || key.downArrow || (key.ctrl && input === 'c') || key.tab || (key.shift && key.tab)) {
       return;
     }
 
@@ -48,22 +39,15 @@ export function UrlInput(props: UrlInputProps) {
     if (key.leftArrow) {
       nextCursorOffset = Math.max(0, cursorState.cursorOffset - 1);
     } else if (key.rightArrow) {
-      nextCursorOffset = Math.min(
-        props.value.length,
-        cursorState.cursorOffset + 1
-      );
+      nextCursorOffset = Math.min(props.value.length, cursorState.cursorOffset + 1);
     } else if (key.backspace || key.delete) {
       if (cursorState.cursorOffset > 0) {
-        nextRawValue =
-          props.value.slice(0, cursorState.cursorOffset - 1) +
-          props.value.slice(cursorState.cursorOffset);
+        nextRawValue = props.value.slice(0, cursorState.cursorOffset - 1) + props.value.slice(cursorState.cursorOffset);
         nextCursorOffset = cursorState.cursorOffset - 1;
       }
     } else {
       nextRawValue =
-        props.value.slice(0, cursorState.cursorOffset) +
-        input +
-        props.value.slice(cursorState.cursorOffset);
+        props.value.slice(0, cursorState.cursorOffset) + input + props.value.slice(cursorState.cursorOffset);
       nextCursorOffset = cursorState.cursorOffset + input.length;
     }
 

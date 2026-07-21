@@ -5,10 +5,7 @@ import type { FetchOptions, ProviderOptions } from './Providers';
 export class DeezerProvider implements ProviderOptions {
   public readonly provider = 'deezer';
   public readonly displayName = 'Deezer';
-  public readonly shortLinkHosts = [
-    'deezer.page.link',
-    'link.deezer.com',
-  ] as const;
+  public readonly shortLinkHosts = ['deezer.page.link', 'link.deezer.com'] as const;
 
   public matchesUrl(url: URL): boolean {
     const pathname = url.pathname.replace(/\/+$/, '') || '/';
@@ -26,10 +23,7 @@ export class DeezerProvider implements ProviderOptions {
     );
   }
 
-  public async fetch(
-    url: string,
-    options: FetchOptions
-  ): Promise<PlaylistMetadata> {
+  public async fetch(url: string, options: FetchOptions): Promise<PlaylistMetadata> {
     const { signal } = options;
     const collectionKind = this.getCollectionKind(url);
     const collectionId = this.extractCollectionId(url);
@@ -39,15 +33,15 @@ export class DeezerProvider implements ProviderOptions {
       return this.fetchTrack(url, endpoint, signal);
     }
 
-    const collectionResponse = await this.fetchJson<
-      DeezerPlaylistResponse & { tracks?: DeezerTrackResponse }
-    >(endpoint, signal);
+    const collectionResponse = await this.fetchJson<DeezerPlaylistResponse & { tracks?: DeezerTrackResponse }>(
+      endpoint,
+      signal
+    );
     const tracks =
       collectionKind === 'album'
         ? (collectionResponse.tracks?.data ?? [])
         : await this.fetchAllTracks(`${endpoint}/tracks?limit=100`, signal);
-    const collectionArtworkUrl =
-      collectionResponse.picture_xl?.trim() || undefined;
+    const collectionArtworkUrl = collectionResponse.picture_xl?.trim() || undefined;
 
     const normalizedTracks = tracks
       .map((track) => this.normalizeTrack(track, collectionArtworkUrl))
@@ -59,13 +53,8 @@ export class DeezerProvider implements ProviderOptions {
 
     return {
       id: String(collectionResponse.id ?? collectionId),
-      title:
-        collectionResponse.title?.trim() ||
-        `Deezer ${collectionKind === 'album' ? 'Album' : 'Playlist'}`,
-      owner:
-        collectionResponse.creator?.name?.trim() ||
-        collectionResponse.artist?.name?.trim() ||
-        undefined,
+      title: collectionResponse.title?.trim() || `Deezer ${collectionKind === 'album' ? 'Album' : 'Playlist'}`,
+      owner: collectionResponse.creator?.name?.trim() || collectionResponse.artist?.name?.trim() || undefined,
       artworkUrl: collectionArtworkUrl,
       provider: 'deezer',
       sourceUrl: collectionResponse.link?.trim() || url,
@@ -73,15 +62,8 @@ export class DeezerProvider implements ProviderOptions {
     };
   }
 
-  private async fetchTrack(
-    sourceUrl: string,
-    endpoint: string,
-    signal?: AbortSignal
-  ): Promise<PlaylistMetadata> {
-    const trackResponse = await this.fetchJson<DeezerTrackItem>(
-      endpoint,
-      signal
-    );
+  private async fetchTrack(sourceUrl: string, endpoint: string, signal?: AbortSignal): Promise<PlaylistMetadata> {
+    const trackResponse = await this.fetchJson<DeezerTrackItem>(endpoint, signal);
     const track = this.normalizeTrack(trackResponse);
 
     if (!track) {
@@ -99,10 +81,7 @@ export class DeezerProvider implements ProviderOptions {
     };
   }
 
-  private normalizeTrack(
-    track: DeezerTrackItem,
-    collectionArtworkUrl?: string
-  ): PlaylistTrack | null {
+  private normalizeTrack(track: DeezerTrackItem, collectionArtworkUrl?: string): PlaylistTrack | null {
     const title = track.title?.trim();
     const artist = track.artist?.name?.trim();
 
@@ -115,10 +94,7 @@ export class DeezerProvider implements ProviderOptions {
       title,
       artists: [artist],
       album: track.album?.title?.trim() || undefined,
-      artworkUrl: getFirstNonEmptyString(
-        track.album?.cover_xl,
-        collectionArtworkUrl
-      ),
+      artworkUrl: getFirstNonEmptyString(track.album?.cover_xl, collectionArtworkUrl),
       durationMs:
         typeof track.duration === 'number' && Number.isFinite(track.duration)
           ? Math.round(track.duration * 1000)
@@ -127,16 +103,12 @@ export class DeezerProvider implements ProviderOptions {
     };
   }
 
-  private async fetchAllTracks(
-    nextUrl: string,
-    signal?: AbortSignal
-  ): Promise<DeezerTrackItem[]> {
+  private async fetchAllTracks(nextUrl: string, signal?: AbortSignal): Promise<DeezerTrackItem[]> {
     const tracks: DeezerTrackItem[] = [];
     let cursor: string | undefined = nextUrl;
 
     while (cursor) {
-      const response: DeezerTrackResponse =
-        await this.fetchJson<DeezerTrackResponse>(cursor, signal);
+      const response: DeezerTrackResponse = await this.fetchJson<DeezerTrackResponse>(cursor, signal);
       tracks.push(...(response.data ?? []));
       cursor = response.next?.trim() || undefined;
     }
@@ -156,14 +128,10 @@ export class DeezerProvider implements ProviderOptions {
 
   private extractCollectionId(sourceUrl: string): string {
     const parsedUrl = new URL(sourceUrl);
-    const match = parsedUrl.pathname.match(
-      /\/(?:album|playlist|track)\/(\d+)/i
-    );
+    const match = parsedUrl.pathname.match(/\/(?:album|playlist|track)\/(\d+)/i);
 
     if (!match?.[1]) {
-      throw new Error(
-        'Could not determine the Deezer collection id from the URL.'
-      );
+      throw new Error('Could not determine the Deezer collection id from the URL.');
     }
 
     return match[1];

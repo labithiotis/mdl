@@ -1,0 +1,47 @@
+name: YouTube Token Worker
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/youtube-token.yml"
+      - "packages/youtube-token/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: youtube-token-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --filter @mdl/youtube-token
+
+      - name: Type check
+        working-directory: packages/youtube-token
+        run: bun run typecheck
+
+      - name: Test
+        working-directory: packages/youtube-token
+        run: bun run test
+
+      - name: Deploy
+        working-directory: packages/youtube-token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler deploy

@@ -19,10 +19,7 @@ describe('youtube-music', () => {
   });
 
   test('provider fetch parses playlist items across continuations', async () => {
-    const firstTrackArtists: MockContributor[] = [
-      { name: 'Artist One' },
-      { toString: () => 'Artist Guest' },
-    ];
+    const firstTrackArtists: MockContributor[] = [{ name: 'Artist One' }, { toString: () => 'Artist Guest' }];
 
     const continuationPage = {
       getContinuation: mock(),
@@ -72,18 +69,13 @@ describe('youtube-music', () => {
     });
 
     const { YouTubeMusicProvider } = await import('./YouTubeMusic');
-    const playlist = await new YouTubeMusicProvider().fetch(
-      'https://music.youtube.com/playlist?list=PL_TEST',
-      {}
-    );
+    const playlist = await new YouTubeMusicProvider().fetch('https://music.youtube.com/playlist?list=PL_TEST', {});
 
     expect(playlist.provider).toBe('youtube-music');
     expect(playlist.id).toBe('PL_TEST');
     expect(playlist.title).toBe('Focus Mix');
     expect(playlist.artworkUrl).toBe('https://i.ytimg.com/playlist.jpg');
-    expect(playlist.sourceUrl).toBe(
-      'https://music.youtube.com/playlist?list=PL_TEST'
-    );
+    expect(playlist.sourceUrl).toBe('https://music.youtube.com/playlist?list=PL_TEST');
     expect(playlist.tracks).toEqual([
       {
         id: 'video-1',
@@ -107,10 +99,7 @@ describe('youtube-music', () => {
   });
 
   test('provider fetch falls back to authors when artists are absent', async () => {
-    const authorsOnlyContributors: MockContributor[] = [
-      { name: 'Author One' },
-      { toString: () => 'Guest Two' },
-    ];
+    const authorsOnlyContributors: MockContributor[] = [{ name: 'Author One' }, { toString: () => 'Guest Two' }];
 
     mockCreate.mockResolvedValue({
       music: {
@@ -151,8 +140,7 @@ describe('youtube-music', () => {
         album: undefined,
         artworkUrl: 'https://i.ytimg.com/authors-playlist.jpg',
         durationMs: 191000,
-        sourceUrl:
-          'https://music.youtube.com/watch?v=authors-track-1&list=PL_AUTHORS_ONLY',
+        sourceUrl: 'https://music.youtube.com/watch?v=authors-track-1&list=PL_AUTHORS_ONLY',
       },
     ]);
   });
@@ -182,18 +170,13 @@ describe('youtube-music', () => {
     });
 
     const { YouTubeMusicProvider } = await import('./YouTubeMusic');
-    const playlist = await new YouTubeMusicProvider().fetch(
-      'https://music.youtube.com/browse/MPREb_test_album_id',
-      {}
-    );
+    const playlist = await new YouTubeMusicProvider().fetch('https://music.youtube.com/browse/MPREb_test_album_id', {});
 
     expect(playlist.provider).toBe('youtube-music');
     expect(playlist.id).toBe('MPREb_test_album_id');
     expect(playlist.title).toBe('Album Name');
     expect(playlist.artworkUrl).toBe('https://i.ytimg.com/album.jpg');
-    expect(playlist.sourceUrl).toBe(
-      'https://music.youtube.com/playlist?list=OLAK5uy_album_test'
-    );
+    expect(playlist.sourceUrl).toBe('https://music.youtube.com/playlist?list=OLAK5uy_album_test');
     expect(playlist.tracks).toEqual([
       {
         id: 'album-track-1',
@@ -202,8 +185,7 @@ describe('youtube-music', () => {
         album: 'Album Name',
         artworkUrl: 'https://i.ytimg.com/album.jpg',
         durationMs: 3723000,
-        sourceUrl:
-          'https://music.youtube.com/watch?v=album-track-1&list=OLAK5uy_album_test',
+        sourceUrl: 'https://music.youtube.com/watch?v=album-track-1&list=OLAK5uy_album_test',
       },
     ]);
   });

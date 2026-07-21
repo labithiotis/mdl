@@ -17,8 +17,7 @@ mock.module('./youtube', () => ({
 import { syncPlaylist } from './sync';
 import { downloadTrackAudio, searchYoutubeTrackCandidates } from './youtube';
 
-const mockedSearchYoutubeTrackCandidates =
-  searchYoutubeTrackCandidates as ReturnType<typeof mock>;
+const mockedSearchYoutubeTrackCandidates = searchYoutubeTrackCandidates as ReturnType<typeof mock>;
 const mockedDownloadTrackAudio = downloadTrackAudio as ReturnType<typeof mock>;
 
 const playlist: PlaylistMetadata = {
@@ -49,31 +48,24 @@ describe('syncPlaylist', () => {
   test('retries a track when a fetch failure bubbles out of track processing', async () => {
     const outputRootDir = await mkdtemp(path.join(os.tmpdir(), 'mdl-sync-'));
 
-    mockedSearchYoutubeTrackCandidates
-      .mockRejectedValueOnce(new Error('fetch failed'))
-      .mockResolvedValue([
-        {
-          id: 'yt-1',
-          url: 'https://youtube.com/watch?v=yt-1',
-          title: 'track1',
-        },
-      ]);
+    mockedSearchYoutubeTrackCandidates.mockRejectedValueOnce(new Error('fetch failed')).mockResolvedValue([
+      {
+        id: 'yt-1',
+        url: 'https://youtube.com/watch?v=yt-1',
+        title: 'track1',
+      },
+    ]);
 
-    mockedDownloadTrackAudio.mockImplementation(
-      async (params: { destinationDir: string }) => {
-        await mkdir(params.destinationDir, { recursive: true });
-        const relativePath = '01-track-one.mp3';
-        await writeFile(
-          path.join(params.destinationDir, relativePath),
-          'audio'
-        );
+    mockedDownloadTrackAudio.mockImplementation(async (params: { destinationDir: string }) => {
+      await mkdir(params.destinationDir, { recursive: true });
+      const relativePath = '01-track-one.mp3';
+      await writeFile(path.join(params.destinationDir, relativePath), 'audio');
 
-        return {
-          fileName: '01-track-one.mp3',
-          relativePath,
-        };
-      }
-    );
+      return {
+        fileName: '01-track-one.mp3',
+        relativePath,
+      };
+    });
 
     const summary = await syncPlaylist({
       downloadParallelism: 1,
@@ -103,29 +95,24 @@ describe('syncPlaylist', () => {
       },
     ]);
 
-    mockedDownloadTrackAudio.mockImplementation(
-      async (params: { destinationDir: string; youtubeUrl: string }) => {
-        if (params.youtubeUrl.includes('yt-login-gated')) {
-          throw new TrackSyncError({
-            reason: 'Video is login required',
-            stage: 'downloading-audio',
-            trackTitle: 'Artist One - Track One',
-          });
-        }
-
-        await mkdir(params.destinationDir, { recursive: true });
-        const relativePath = '01-track-one.mp3';
-        await writeFile(
-          path.join(params.destinationDir, relativePath),
-          'audio'
-        );
-
-        return {
-          fileName: '01-track-one.mp3',
-          relativePath,
-        };
+    mockedDownloadTrackAudio.mockImplementation(async (params: { destinationDir: string; youtubeUrl: string }) => {
+      if (params.youtubeUrl.includes('yt-login-gated')) {
+        throw new TrackSyncError({
+          reason: 'Video is login required',
+          stage: 'downloading-audio',
+          trackTitle: 'Artist One - Track One',
+        });
       }
-    );
+
+      await mkdir(params.destinationDir, { recursive: true });
+      const relativePath = '01-track-one.mp3';
+      await writeFile(path.join(params.destinationDir, relativePath), 'audio');
+
+      return {
+        fileName: '01-track-one.mp3',
+        relativePath,
+      };
+    });
 
     const summary = await syncPlaylist({
       downloadParallelism: 1,
@@ -133,16 +120,10 @@ describe('syncPlaylist', () => {
       playlist,
     });
 
-    const attemptedYoutubeUrls = mockedDownloadTrackAudio.mock.calls.map(
-      ([params]) => params.youtubeUrl
-    );
+    const attemptedYoutubeUrls = mockedDownloadTrackAudio.mock.calls.map(([params]) => params.youtubeUrl);
 
-    expect(attemptedYoutubeUrls).toContain(
-      'https://youtube.com/watch?v=yt-login-gated'
-    );
-    expect(attemptedYoutubeUrls).toContain(
-      'https://youtube.com/watch?v=yt-open'
-    );
+    expect(attemptedYoutubeUrls).toContain('https://youtube.com/watch?v=yt-login-gated');
+    expect(attemptedYoutubeUrls).toContain('https://youtube.com/watch?v=yt-open');
     expect(summary.downloaded).toBe(1);
     expect(summary.failed).toEqual([]);
   }, 10000);

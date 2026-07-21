@@ -38,15 +38,7 @@ export async function syncPlaylist(params: {
   onProgress?: (progress: SyncProgress) => void;
   signal?: AbortSignal;
 }): Promise<SyncSummary> {
-  const {
-    audioFormat,
-    audioQuality,
-    downloadParallelism = 5,
-    playlist,
-    outputRootDir,
-    onProgress,
-    signal,
-  } = params;
+  const { audioFormat, audioQuality, downloadParallelism = 5, playlist, outputRootDir, onProgress, signal } = params;
   const playlistDir = await resolvePlaylistDirectory(outputRootDir, playlist);
   const existingManifest = await loadManifest(playlistDir);
   let manifest: SyncManifest = existingManifest ?? {
@@ -58,9 +50,7 @@ export async function syncPlaylist(params: {
     generatedAt: new Date().toISOString(),
     tracks: [],
   };
-  const existingTracks = new Map(
-    manifest.tracks.map((track) => [track.sourceTrackId, track])
-  );
+  const existingTracks = new Map(manifest.tracks.map((track) => [track.sourceTrackId, track]));
   const failed: SyncSummary['failed'] = [];
   let downloaded = 0;
   let skipped = 0;
@@ -82,274 +72,242 @@ export async function syncPlaylist(params: {
       : `Creating a new manifest in ${MANIFEST_FILE_NAME}. Downloading up to ${downloadParallelism} tracks in parallel`,
   });
 
-  await mapWithConcurrency(
-    playlist.tracks,
-    downloadParallelism,
-    async (track, index, workerId) => {
-      signal?.throwIfAborted();
-      const trackIndex = index + 1;
-      const emitTrackProgress = (
-        overrides: Partial<SyncProgress> &
-          Pick<SyncProgress, 'message' | 'stage'>
-      ) => {
-        const progress =
-          overrides.progress ?? progressForStage(overrides.stage);
+  await mapWithConcurrency(playlist.tracks, downloadParallelism, async (track, index, workerId) => {
+    signal?.throwIfAborted();
+    const trackIndex = index + 1;
+    const emitTrackProgress = (overrides: Partial<SyncProgress> & Pick<SyncProgress, 'message' | 'stage'>) => {
+      const progress = overrides.progress ?? progressForStage(overrides.stage);
 
-        onProgress?.({
-          current: trackIndex,
-          total: playlist.tracks.length,
-          completed: downloaded + skipped + failed.length,
-          downloaded,
-          skipped,
-          failed: failed.length,
-          trackIndex,
-          workerCount: downloadParallelism,
-          workerId,
-          playlistDir,
-          progress,
-          track,
-          ...overrides,
-        });
-      };
-
-      emitTrackProgress({
-        progress: trackProgressForRatio(...TRACK_STAGE_RANGES.initializing, 0),
-        stage: 'initializing',
-        message: 'Preparing track',
+      onProgress?.({
+        current: trackIndex,
+        total: playlist.tracks.length,
+        completed: downloaded + skipped + failed.length,
+        downloaded,
+        skipped,
+        failed: failed.length,
+        trackIndex,
+        workerCount: downloadParallelism,
+        workerId,
+        playlistDir,
+        progress,
+        track,
+        ...overrides,
       });
+    };
 
-      const existingTrack = existingTracks.get(track.id);
-      if (
-        existingTrack &&
-        (await fileExists(path.join(playlistDir, existingTrack.relativePath)))
-      ) {
-        skipped += 1;
-        emitTrackProgress({
-          progress: 100,
-          stage: 'skipped',
-          message: 'Already downloaded',
-        });
-        return;
-      }
+    emitTrackProgress({
+      progress: trackProgressForRatio(...TRACK_STAGE_RANGES.initializing, 0),
+      stage: 'initializing',
+      message: 'Preparing track',
+    });
 
-      try {
-        const completedTrack = await Effect.runPromise(
-          runEffectWithRetry({
-            baseDelayMs: TRACK_RETRY_DELAY_MS,
-            maxRetries: TRACK_RETRY_COUNT,
-            effect: Effect.gen(function* () {
-              yield* Effect.sync(() => signal?.throwIfAborted());
-              const youtubeMatches = yield* runEffectWithRetry({
-                baseDelayMs: TRACK_RETRY_DELAY_MS,
-                maxRetries: TRACK_RETRY_COUNT,
-                effect: Effect.tryPromise({
-                  try: () =>
-                    withEstimatedStageProgress({
-                      durationMs: SEARCH_STAGE_DURATION_MS,
-                      endPercent: TRACK_STAGE_RANGES.searching[1],
-                      onProgress: (progress) => {
-                        emitTrackProgress({
-                          progress,
-                          stage: 'searching-youtube',
-                          message: 'Searching YouTube',
-                        });
-                      },
-                      startPercent: TRACK_STAGE_RANGES.searching[0],
-                      task: () => searchYoutubeTrackCandidates(track),
-                    }),
-                  catch: (error) =>
-                    toTrackSyncError(track, 'searching-youtube', error),
-                }),
-                onRetry: (attempt, error) => {
-                  emitTrackProgress({
-                    progress: TRACK_STAGE_RANGES.searching[0],
-                    stage: 'searching-youtube',
-                    message: formatRetryMessage(
-                      'Searching YouTube',
-                      attempt,
-                      error
-                    ),
-                  });
-                },
-              });
-              let lastDownloadError: TrackSyncError | null = null;
+    const existingTrack = existingTracks.get(track.id);
+    if (existingTrack && (await fileExists(path.join(playlistDir, existingTrack.relativePath)))) {
+      skipped += 1;
+      emitTrackProgress({
+        progress: 100,
+        stage: 'skipped',
+        message: 'Already downloaded',
+      });
+      return;
+    }
 
-              for (const candidate of youtubeMatches) {
-                yield* Effect.sync(() => signal?.throwIfAborted());
-                const downloadMessage = 'Downloading track';
+    try {
+      const completedTrack = await Effect.runPromise(
+        runEffectWithRetry({
+          baseDelayMs: TRACK_RETRY_DELAY_MS,
+          maxRetries: TRACK_RETRY_COUNT,
+          effect: Effect.gen(function* () {
+            yield* Effect.sync(() => signal?.throwIfAborted());
+            const youtubeMatches = yield* runEffectWithRetry({
+              baseDelayMs: TRACK_RETRY_DELAY_MS,
+              maxRetries: TRACK_RETRY_COUNT,
+              effect: Effect.tryPromise({
+                try: () =>
+                  withEstimatedStageProgress({
+                    durationMs: SEARCH_STAGE_DURATION_MS,
+                    endPercent: TRACK_STAGE_RANGES.searching[1],
+                    onProgress: (progress) => {
+                      emitTrackProgress({
+                        progress,
+                        stage: 'searching-youtube',
+                        message: 'Searching YouTube',
+                      });
+                    },
+                    startPercent: TRACK_STAGE_RANGES.searching[0],
+                    task: () => searchYoutubeTrackCandidates(track),
+                  }),
+                catch: (error) => toTrackSyncError(track, 'searching-youtube', error),
+              }),
+              onRetry: (attempt, error) => {
                 emitTrackProgress({
-                  progress: TRACK_STAGE_RANGES.downloading[0],
-                  stage: 'downloading-audio',
-                  downloadPercent: 0,
+                  progress: TRACK_STAGE_RANGES.searching[0],
+                  stage: 'searching-youtube',
+                  message: formatRetryMessage('Searching YouTube', attempt, error),
+                });
+              },
+            });
+            let lastDownloadError: TrackSyncError | null = null;
+
+            for (const candidate of youtubeMatches) {
+              yield* Effect.sync(() => signal?.throwIfAborted());
+              const downloadMessage = 'Downloading track';
+              emitTrackProgress({
+                progress: TRACK_STAGE_RANGES.downloading[0],
+                stage: 'downloading-audio',
+                downloadPercent: 0,
+                youtubeUrl: candidate.url,
+                message: downloadMessage,
+              });
+
+              const downloadResult = yield* Effect.either(
+                runEffectWithRetry({
+                  baseDelayMs: TRACK_RETRY_DELAY_MS,
+                  maxRetries: TRACK_RETRY_COUNT,
+                  effect: Effect.tryPromise({
+                    try: () =>
+                      downloadTrackAudio({
+                        audioFormat,
+                        audioQuality,
+                        destinationDir: playlistDir,
+                        index: index + 1,
+                        onProgress: (downloadProgress) => {
+                          emitTrackProgress({
+                            progress: trackProgressForRatio(
+                              ...TRACK_STAGE_RANGES.downloading,
+                              percentToRatio(downloadProgress.percent)
+                            ),
+                            downloadPercent: clampPercent(downloadProgress.percent ?? 0),
+                            stage: 'downloading-audio',
+                            youtubeUrl: candidate.url,
+                            message: downloadMessage,
+                          });
+                        },
+                        track,
+                        youtubeUrl: candidate.url,
+                        signal,
+                      }),
+                    catch: (error) => toTrackSyncError(track, 'downloading-audio', error),
+                  }),
+                  onRetry: (attempt, error) => {
+                    emitTrackProgress({
+                      progress: TRACK_STAGE_RANGES.downloading[0],
+                      stage: 'downloading-audio',
+                      youtubeUrl: candidate.url,
+                      message: formatRetryMessage(downloadMessage, attempt, error),
+                    });
+                  },
+                  shouldRetry: (error) => !isSkippableYouTubeCandidateError(error),
+                })
+              );
+
+              if (downloadResult._tag === 'Right') {
+                const file = downloadResult.right;
+                yield* Effect.sync(() => signal?.throwIfAborted());
+                emitTrackProgress({
+                  progress: TRACK_STAGE_RANGES.metadata[0],
+                  stage: 'writing-metadata',
                   youtubeUrl: candidate.url,
-                  message: downloadMessage,
+                  message: 'Embedding metadata',
+                });
+                yield* runEffectWithRetry({
+                  baseDelayMs: TRACK_RETRY_DELAY_MS,
+                  maxRetries: TRACK_RETRY_COUNT,
+                  effect: Effect.tryPromise({
+                    try: () =>
+                      writeTrackMetadata({
+                        filePath: path.join(playlistDir, file.relativePath),
+                        track,
+                        signal,
+                      }),
+                    catch: (error) => toTrackSyncError(track, 'writing-metadata', error),
+                  }),
+                  onRetry: (attempt, error) => {
+                    emitTrackProgress({
+                      progress: TRACK_STAGE_RANGES.metadata[0],
+                      stage: 'writing-metadata',
+                      youtubeUrl: candidate.url,
+                      message: formatRetryMessage('Embedding metadata', attempt, error),
+                    });
+                  },
+                });
+                const manifestTrack = toManifestTrack(track, candidate, file);
+                emitTrackProgress({
+                  progress: TRACK_STAGE_RANGES.manifest[0],
+                  stage: 'writing-manifest',
+                  fileName: file.fileName,
+                  youtubeUrl: candidate.url,
+                  message: 'Writing manifest',
+                });
+                manifestSaveQueue = manifestSaveQueue.then(async () => {
+                  manifest = upsertManifestTrack(manifest, manifestTrack);
+                  manifest = {
+                    ...manifest,
+                    generatedAt: new Date().toISOString(),
+                  };
+                  await saveManifest(playlistDir, manifest);
+                });
+                yield* Effect.tryPromise({
+                  try: () => manifestSaveQueue,
+                  catch: (error) => toTrackSyncError(track, 'writing-manifest', error),
                 });
 
-                const downloadResult = yield* Effect.either(
-                  runEffectWithRetry({
-                    baseDelayMs: TRACK_RETRY_DELAY_MS,
-                    maxRetries: TRACK_RETRY_COUNT,
-                    effect: Effect.tryPromise({
-                      try: () =>
-                        downloadTrackAudio({
-                          audioFormat,
-                          audioQuality,
-                          destinationDir: playlistDir,
-                          index: index + 1,
-                          onProgress: (downloadProgress) => {
-                            emitTrackProgress({
-                              progress: trackProgressForRatio(
-                                ...TRACK_STAGE_RANGES.downloading,
-                                percentToRatio(downloadProgress.percent)
-                              ),
-                              downloadPercent: clampPercent(
-                                downloadProgress.percent ?? 0
-                              ),
-                              stage: 'downloading-audio',
-                              youtubeUrl: candidate.url,
-                              message: downloadMessage,
-                            });
-                          },
-                          track,
-                          youtubeUrl: candidate.url,
-                          signal,
-                        }),
-                      catch: (error) =>
-                        toTrackSyncError(track, 'downloading-audio', error),
-                    }),
-                    onRetry: (attempt, error) => {
-                      emitTrackProgress({
-                        progress: TRACK_STAGE_RANGES.downloading[0],
-                        stage: 'downloading-audio',
-                        youtubeUrl: candidate.url,
-                        message: formatRetryMessage(
-                          downloadMessage,
-                          attempt,
-                          error
-                        ),
-                      });
-                    },
-                    shouldRetry: (error) =>
-                      !isSkippableYouTubeCandidateError(error),
-                  })
-                );
-
-                if (downloadResult._tag === 'Right') {
-                  const file = downloadResult.right;
-                  yield* Effect.sync(() => signal?.throwIfAborted());
-                  emitTrackProgress({
-                    progress: TRACK_STAGE_RANGES.metadata[0],
-                    stage: 'writing-metadata',
-                    youtubeUrl: candidate.url,
-                    message: 'Embedding metadata',
-                  });
-                  yield* runEffectWithRetry({
-                    baseDelayMs: TRACK_RETRY_DELAY_MS,
-                    maxRetries: TRACK_RETRY_COUNT,
-                    effect: Effect.tryPromise({
-                      try: () =>
-                        writeTrackMetadata({
-                          filePath: path.join(playlistDir, file.relativePath),
-                          track,
-                          signal,
-                        }),
-                      catch: (error) =>
-                        toTrackSyncError(track, 'writing-metadata', error),
-                    }),
-                    onRetry: (attempt, error) => {
-                      emitTrackProgress({
-                        progress: TRACK_STAGE_RANGES.metadata[0],
-                        stage: 'writing-metadata',
-                        youtubeUrl: candidate.url,
-                        message: formatRetryMessage(
-                          'Embedding metadata',
-                          attempt,
-                          error
-                        ),
-                      });
-                    },
-                  });
-                  const manifestTrack = toManifestTrack(track, candidate, file);
-                  emitTrackProgress({
-                    progress: TRACK_STAGE_RANGES.manifest[0],
-                    stage: 'writing-manifest',
-                    fileName: file.fileName,
-                    youtubeUrl: candidate.url,
-                    message: 'Writing manifest',
-                  });
-                  manifestSaveQueue = manifestSaveQueue.then(async () => {
-                    manifest = upsertManifestTrack(manifest, manifestTrack);
-                    manifest = {
-                      ...manifest,
-                      generatedAt: new Date().toISOString(),
-                    };
-                    await saveManifest(playlistDir, manifest);
-                  });
-                  yield* Effect.tryPromise({
-                    try: () => manifestSaveQueue,
-                    catch: (error) =>
-                      toTrackSyncError(track, 'writing-manifest', error),
-                  });
-
-                  return {
-                    file,
-                    youtubeMatch: candidate,
-                  };
-                }
-
-                lastDownloadError = downloadResult.left;
-                if (isSkippableYouTubeCandidateError(lastDownloadError)) {
-                  continue;
-                }
-
-                yield* Effect.fail(downloadResult.left);
+                return {
+                  file,
+                  youtubeMatch: candidate,
+                };
               }
 
-              return yield* Effect.fail(
-                lastDownloadError ??
-                  new TrackSyncError({
-                    reason: 'All YouTube candidates failed.',
-                    stage: 'downloading-audio',
-                    trackTitle: getTrackLabel(track),
-                  })
-              );
-            }),
-            onRetry: (attempt, error) => {
-              emitTrackProgress({
-                stage: 'initializing',
-                message: formatTrackRetryMessage(attempt, error),
-              });
-            },
-            shouldRetry: isRetryableTrackFetchError,
-          })
-        );
-        downloaded += 1;
-        const fileStats = await stat(
-          path.join(playlistDir, completedTrack.file.relativePath)
-        );
-        emitTrackProgress({
-          progress: 100,
-          stage: 'completed',
-          fileName: completedTrack.file.fileName,
-          fileSizeLabel: formatFileSize(fileStats.size),
-          youtubeUrl: completedTrack.youtubeMatch.url,
-          message: completedTrack.file.fileName,
-        });
-      } catch (error) {
-        if (isAbortError(error)) {
-          throw error;
-        }
+              lastDownloadError = downloadResult.left;
+              if (isSkippableYouTubeCandidateError(lastDownloadError)) {
+                continue;
+              }
 
-        const reason = formatEffectError(error);
-        failed.push({ track, reason });
-        emitTrackProgress({
-          progress: 100,
-          stage: 'failed',
-          message: reason,
-        });
+              yield* Effect.fail(downloadResult.left);
+            }
+
+            return yield* Effect.fail(
+              lastDownloadError ??
+                new TrackSyncError({
+                  reason: 'All YouTube candidates failed.',
+                  stage: 'downloading-audio',
+                  trackTitle: getTrackLabel(track),
+                })
+            );
+          }),
+          onRetry: (attempt, error) => {
+            emitTrackProgress({
+              stage: 'initializing',
+              message: formatTrackRetryMessage(attempt, error),
+            });
+          },
+          shouldRetry: isRetryableTrackFetchError,
+        })
+      );
+      downloaded += 1;
+      const fileStats = await stat(path.join(playlistDir, completedTrack.file.relativePath));
+      emitTrackProgress({
+        progress: 100,
+        stage: 'completed',
+        fileName: completedTrack.file.fileName,
+        fileSizeLabel: formatFileSize(fileStats.size),
+        youtubeUrl: completedTrack.youtubeMatch.url,
+        message: completedTrack.file.fileName,
+      });
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
       }
+
+      const reason = formatEffectError(error);
+      failed.push({ track, reason });
+      emitTrackProgress({
+        progress: 100,
+        stage: 'failed',
+        message: reason,
+      });
     }
-  );
+  });
 
   manifest = {
     ...manifest,
@@ -374,20 +332,13 @@ async function mapWithConcurrency<TInput, TOutput>(
   const results = new Array<TOutput>(values.length);
   let cursor = 0;
 
-  const workers = Array.from(
-    { length: Math.min(concurrency, values.length) },
-    async (_, workerId) => {
-      while (cursor < values.length) {
-        const currentIndex = cursor;
-        cursor += 1;
-        results[currentIndex] = await mapper(
-          values[currentIndex],
-          currentIndex,
-          workerId
-        );
-      }
+  const workers = Array.from({ length: Math.min(concurrency, values.length) }, async (_, workerId) => {
+    while (cursor < values.length) {
+      const currentIndex = cursor;
+      cursor += 1;
+      results[currentIndex] = await mapper(values[currentIndex], currentIndex, workerId);
     }
-  );
+  });
 
   await Promise.all(workers);
   return results;
@@ -416,23 +367,14 @@ function progressForStage(stage: SyncStage): number {
   }
 }
 
-async function resolvePlaylistDirectory(
-  outputRootDir: string,
-  playlist: PlaylistMetadata
-): Promise<string> {
-  const preferredDir = path.resolve(
-    outputRootDir,
-    buildPlaylistFolderName(playlist)
-  );
+async function resolvePlaylistDirectory(outputRootDir: string, playlist: PlaylistMetadata): Promise<string> {
+  const preferredDir = path.resolve(outputRootDir, buildPlaylistFolderName(playlist));
   const preferredManifest = await loadManifest(preferredDir);
   if (manifestMatchesPlaylist(preferredManifest, playlist)) {
     return preferredDir;
   }
 
-  const legacyDir = path.resolve(
-    outputRootDir,
-    sanitizeFilename(playlist.title) || playlist.id
-  );
+  const legacyDir = path.resolve(outputRootDir, sanitizeFilename(playlist.title) || playlist.id);
   const legacyManifest = await loadManifest(legacyDir);
   if (manifestMatchesPlaylist(legacyManifest, playlist)) {
     return legacyDir;
@@ -445,10 +387,7 @@ function buildPlaylistFolderName(playlist: PlaylistMetadata): string {
   return sanitizeFilename(playlist.title) || 'playlist';
 }
 
-function manifestMatchesPlaylist(
-  manifest: SyncManifest | null,
-  playlist: PlaylistMetadata
-): boolean {
+function manifestMatchesPlaylist(manifest: SyncManifest | null, playlist: PlaylistMetadata): boolean {
   if (!manifest) {
     return false;
   }
@@ -471,14 +410,9 @@ async function withEstimatedStageProgress<T>(params: {
   params.onProgress(params.startPercent);
 
   const timer = setInterval(() => {
-    const elapsedRatio = Math.min(
-      (Date.now() - startedAt) / params.durationMs,
-      1
-    );
+    const elapsedRatio = Math.min((Date.now() - startedAt) / params.durationMs, 1);
     const easedRatio = easeOutProgress(elapsedRatio);
-    params.onProgress(
-      trackProgressForRatio(params.startPercent, params.endPercent, easedRatio)
-    );
+    params.onProgress(trackProgressForRatio(params.startPercent, params.endPercent, easedRatio));
   }, 250);
 
   try {
@@ -490,14 +424,8 @@ async function withEstimatedStageProgress<T>(params: {
   }
 }
 
-function trackProgressForRatio(
-  startPercent: number,
-  endPercent: number,
-  ratio: number
-): number {
-  return clampPercent(
-    startPercent + (endPercent - startPercent) * Math.max(0, Math.min(ratio, 1))
-  );
+function trackProgressForRatio(startPercent: number, endPercent: number, ratio: number): number {
+  return clampPercent(startPercent + (endPercent - startPercent) * Math.max(0, Math.min(ratio, 1)));
 }
 
 function percentToRatio(percent?: number): number {
@@ -524,20 +452,13 @@ function easeOutProgress(ratio: number): number {
   return 1 - (1 - Math.max(0, Math.min(ratio, 1))) ** 2;
 }
 
-function upsertManifestTrack(
-  manifest: SyncManifest,
-  track: ManifestTrack
-): SyncManifest {
-  const existingIndex = manifest.tracks.findIndex(
-    (entry) => entry.sourceTrackId === track.sourceTrackId
-  );
+function upsertManifestTrack(manifest: SyncManifest, track: ManifestTrack): SyncManifest {
+  const existingIndex = manifest.tracks.findIndex((entry) => entry.sourceTrackId === track.sourceTrackId);
 
   if (existingIndex >= 0) {
     return {
       ...manifest,
-      tracks: manifest.tracks.map((entry, index) =>
-        index === existingIndex ? track : entry
-      ),
+      tracks: manifest.tracks.map((entry, index) => (index === existingIndex ? track : entry)),
     };
   }
 
@@ -581,6 +502,7 @@ function isSkippableYouTubeCandidateError(error: unknown): boolean {
 
   return (
     message.includes('video is not available') ||
+    message.includes('no valid url to decipher') ||
     message.includes('video is login required') ||
     message.includes('login required') ||
     message.includes('private video') ||
@@ -590,11 +512,7 @@ function isSkippableYouTubeCandidateError(error: unknown): boolean {
   );
 }
 
-function toTrackSyncError(
-  track: PlaylistTrack,
-  stage: SyncStage,
-  error: unknown
-): TrackSyncError {
+function toTrackSyncError(track: PlaylistTrack, stage: SyncStage, error: unknown): TrackSyncError {
   return new TrackSyncError({
     reason: formatUnknownError(error),
     stage,
@@ -602,11 +520,7 @@ function toTrackSyncError(
   });
 }
 
-function formatRetryMessage(
-  prefix: string,
-  attempt: number,
-  error: unknown
-): string {
+function formatRetryMessage(prefix: string, attempt: number, error: unknown): string {
   return `${prefix} retry ${attempt}/${TRACK_RETRY_COUNT}: ${formatEffectError(error)}`;
 }
 

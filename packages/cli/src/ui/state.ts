@@ -1,10 +1,5 @@
 import { getProviderUrlValidationError } from '../lib/providers/Providers';
-import type {
-  PlaylistMetadata,
-  SyncManifest,
-  SyncProgress,
-  SyncSummary,
-} from '../lib/types';
+import type { PlaylistMetadata, SyncManifest, SyncProgress, SyncSummary } from '../lib/types';
 import { createWorkerSlots, updateWorkerSlots } from './utils/workerSlots';
 
 export type Phase =
@@ -68,10 +63,7 @@ type Action =
     }
   | { type: 'error'; message: string };
 
-export function createInitialState(options: {
-  initialUrl?: string;
-  manifest?: SyncManifest | null;
-}): AppState {
+export function createInitialState(options: { initialUrl?: string; manifest?: SyncManifest | null }): AppState {
   const { initialUrl, manifest } = options;
 
   return {
@@ -96,10 +88,7 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         url: action.value,
-        phase:
-          state.phase.kind === 'collecting-input'
-            ? { kind: 'collecting-input' }
-            : state.phase,
+        phase: state.phase.kind === 'collecting-input' ? { kind: 'collecting-input' } : state.phase,
       };
     case 'submit-url': {
       const nextUrl = action.value.trim();
@@ -170,10 +159,7 @@ export function reducer(state: AppState, action: Action): AppState {
           kind: 'syncing',
           url: action.url,
           playlist: action.playlist,
-          workerSlots: createWorkerSlots(
-            action.playlist,
-            action.downloadParallelism
-          ),
+          workerSlots: createWorkerSlots(action.playlist, action.downloadParallelism),
         },
       };
     case 'sync-progress':
@@ -184,11 +170,7 @@ export function reducer(state: AppState, action: Action): AppState {
             ? {
                 ...state.phase,
                 progress: action.progress,
-                workerSlots: updateWorkerSlots(
-                  state.phase.workerSlots,
-                  state.phase.playlist,
-                  action.progress
-                ),
+                workerSlots: updateWorkerSlots(state.phase.workerSlots, state.phase.playlist, action.progress),
               }
             : state.phase,
       };

@@ -7,11 +7,7 @@ import { loadManifest, MANIFEST_FILE_NAME } from './manifest';
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(
-    temporaryDirectories
-      .splice(0)
-      .map((directory) => rm(directory, { force: true, recursive: true }))
-  );
+  await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { force: true, recursive: true })));
 });
 
 describe('manifest', () => {
@@ -26,10 +22,7 @@ describe('manifest', () => {
 
   test('loadManifest returns null when the manifest shape is invalid', async () => {
     const directory = await createTemporaryDirectory();
-    await writeFile(
-      path.join(directory, MANIFEST_FILE_NAME),
-      `${JSON.stringify({ version: 1, tracks: 'bad' })}\n`
-    );
+    await writeFile(path.join(directory, MANIFEST_FILE_NAME), `${JSON.stringify({ version: 1, tracks: 'bad' })}\n`);
 
     const manifest = await loadManifest(directory);
 

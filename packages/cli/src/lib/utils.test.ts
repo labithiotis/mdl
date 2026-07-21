@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
-import {
-  formatEffectError,
-  ManifestDecodeError,
-  makeRetrySchedule,
-  runEffectWithRetry,
-  TrackSyncError,
-} from './utils';
+import { formatEffectError, ManifestDecodeError, makeRetrySchedule, runEffectWithRetry, TrackSyncError } from './utils';
 
 describe('utils', () => {
   test('formatEffectError renders track sync errors with stage context', () => {
@@ -26,9 +20,7 @@ describe('utils', () => {
       message: 'tracks is missing',
     });
 
-    expect(formatEffectError(error)).toBe(
-      'Invalid manifest data: tracks is missing'
-    );
+    expect(formatEffectError(error)).toBe('Invalid manifest data: tracks is missing');
   });
 
   test('makeRetrySchedule retries before surfacing the final failure', async () => {
@@ -61,9 +53,7 @@ describe('utils', () => {
         baseDelayMs: 1,
         effect: Effect.suspend(() => {
           failures += 1;
-          return failures < 3
-            ? Effect.fail('temporary network failure')
-            : Effect.succeed('ok');
+          return failures < 3 ? Effect.fail('temporary network failure') : Effect.succeed('ok');
         }),
         onRetry: (attempt, error) => {
           attempts.push(attempt);

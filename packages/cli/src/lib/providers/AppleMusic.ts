@@ -11,9 +11,7 @@ export class AppleMusicProvider implements ProviderOptions {
     const pathname = url.pathname.replace(/\/+$/, '') || '/';
 
     return (
-      ['music.apple.com', 'geo.music.apple.com'].includes(
-        url.hostname.toLowerCase()
-      ) &&
+      ['music.apple.com', 'geo.music.apple.com'].includes(url.hostname.toLowerCase()) &&
       [
         /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?album\/[^/]+\/\d+(?:\/)?$/i,
         /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?playlist\/[^/]+\/pl\.[A-Za-z0-9.]+(?:\/)?$/i,
@@ -22,10 +20,7 @@ export class AppleMusicProvider implements ProviderOptions {
     );
   }
 
-  public async fetch(
-    url: string,
-    _options: FetchOptions
-  ): Promise<PlaylistMetadata> {
+  public async fetch(url: string, _options: FetchOptions): Promise<PlaylistMetadata> {
     const trackId = this.extractTrackId(url);
     const response = await fetch(url, {
       headers: {
@@ -34,39 +29,21 @@ export class AppleMusicProvider implements ProviderOptions {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Apple Music request failed with status ${response.status}.`
-      );
+      throw new Error(`Apple Music request failed with status ${response.status}.`);
     }
 
-    return this.parsePlaylistHtml(
-      await response.text(),
-      url,
-      trackId ?? undefined
-    );
+    return this.parsePlaylistHtml(await response.text(), url, trackId ?? undefined);
   }
 
-  public parsePlaylistHtml(
-    html: string,
-    sourceUrl: string,
-    trackId?: string
-  ): PlaylistMetadata {
+  public parsePlaylistHtml(html: string, sourceUrl: string, trackId?: string): PlaylistMetadata {
     const serializedData = this.extractSerializedServerData(html);
     const playlistHeader = this.findPlaylistHeader(serializedData);
-    const collectionArtworkUrl = this.normalizeArtworkUrl(
-      playlistHeader?.artwork
-    );
-    const tracks = this.findTrackItems(serializedData).map((track) =>
-      this.normalizeTrack(track, collectionArtworkUrl)
-    );
-    const selectedTrack = trackId
-      ? tracks.find((track) => track.id === trackId)
-      : undefined;
+    const collectionArtworkUrl = this.normalizeArtworkUrl(playlistHeader?.artwork);
+    const tracks = this.findTrackItems(serializedData).map((track) => this.normalizeTrack(track, collectionArtworkUrl));
+    const selectedTrack = trackId ? tracks.find((track) => track.id === trackId) : undefined;
 
     if (!playlistHeader) {
-      throw new Error(
-        'Could not find Apple Music collection metadata in the page.'
-      );
+      throw new Error('Could not find Apple Music collection metadata in the page.');
     }
 
     if (tracks.length === 0 || (trackId && !selectedTrack)) {
@@ -88,11 +65,8 @@ export class AppleMusicProvider implements ProviderOptions {
     const isAlbum = playlistHeader.contentDescriptor?.kind === 'album';
     return {
       id:
-        playlistHeader.contentDescriptor?.identifiers?.storeAdamID ??
-        `${isAlbum ? 'album' : 'playlist'}-${Date.now()}`,
-      title:
-        playlistHeader.title?.trim() ||
-        `Apple Music ${isAlbum ? 'Album' : 'Playlist'}`,
+        playlistHeader.contentDescriptor?.identifiers?.storeAdamID ?? `${isAlbum ? 'album' : 'playlist'}-${Date.now()}`,
+      title: playlistHeader.title?.trim() || `Apple Music ${isAlbum ? 'Album' : 'Playlist'}`,
       owner: playlistHeader.subtitleLinks?.[0]?.title?.trim() || undefined,
       artworkUrl: collectionArtworkUrl,
       provider: 'apple-music',
@@ -114,37 +88,26 @@ export class AppleMusicProvider implements ProviderOptions {
   }
 
   private extractSerializedServerData(html: string): AppleMusicSerializedData {
-    const match = html.match(
-      /<script type="application\/json" id="serialized-server-data">([\s\S]*?)<\/script>/
-    );
+    const match = html.match(/<script type="application\/json" id="serialized-server-data">([\s\S]*?)<\/script>/);
 
     if (!match?.[1]) {
-      throw new Error(
-        'Could not find serialized Apple Music collection data in the page.'
-      );
+      throw new Error('Could not find serialized Apple Music collection data in the page.');
     }
 
     return JSON.parse(match[1]) as AppleMusicSerializedData;
   }
 
-  private findPlaylistHeader(
-    value: AppleMusicSerializedData
-  ): AppleMusicPlaylistHeader | null {
-    return this.findFirst(
-      value,
-      (candidate): candidate is AppleMusicPlaylistHeader => {
-        return (
-          this.isObject(candidate) &&
-          this.hasContentDescriptorKind(candidate, 'album', 'playlist') &&
-          typeof candidate.title === 'string'
-        );
-      }
-    );
+  private findPlaylistHeader(value: AppleMusicSerializedData): AppleMusicPlaylistHeader | null {
+    return this.findFirst(value, (candidate): candidate is AppleMusicPlaylistHeader => {
+      return (
+        this.isObject(candidate) &&
+        this.hasContentDescriptorKind(candidate, 'album', 'playlist') &&
+        typeof candidate.title === 'string'
+      );
+    });
   }
 
-  private findTrackItems(
-    value: AppleMusicSerializedData
-  ): AppleMusicTrackItem[] {
+  private findTrackItems(value: AppleMusicSerializedData): AppleMusicTrackItem[] {
     const tracks: AppleMusicTrackItem[] = [];
 
     this.walk(value, (candidate) => {
@@ -161,25 +124,14 @@ export class AppleMusicProvider implements ProviderOptions {
     return this.dedupeTracks(tracks);
   }
 
-  private normalizeTrack(
-    track: AppleMusicTrackItem,
-    collectionArtworkUrl?: string
-  ): PlaylistTrack {
+  private normalizeTrack(track: AppleMusicTrackItem, collectionArtworkUrl?: string): PlaylistTrack {
     return {
-      id:
-        track.contentDescriptor?.identifiers?.storeAdamID ??
-        `${track.artistName}-${track.title}`,
+      id: track.contentDescriptor?.identifiers?.storeAdamID ?? `${track.artistName}-${track.title}`,
       title: track.title?.trim() || 'Unknown title',
       artists: [track.artistName?.trim() || 'Unknown artist'],
       album: track.tertiaryLinks?.[0]?.title?.trim() || undefined,
-      artworkUrl: getFirstNonEmptyString(
-        this.normalizeArtworkUrl(track.artwork),
-        collectionArtworkUrl
-      ),
-      durationMs:
-        typeof track.duration === 'number' && Number.isFinite(track.duration)
-          ? track.duration
-          : undefined,
+      artworkUrl: getFirstNonEmptyString(this.normalizeArtworkUrl(track.artwork), collectionArtworkUrl),
+      durationMs: typeof track.duration === 'number' && Number.isFinite(track.duration) ? track.duration : undefined,
       sourceUrl: track.contentDescriptor?.url?.trim() || undefined,
     };
   }
@@ -190,10 +142,7 @@ export class AppleMusicProvider implements ProviderOptions {
       return undefined;
     }
 
-    return template
-      .replace('{w}', '1200')
-      .replace('{h}', '1200')
-      .replace('{f}', 'jpg');
+    return template.replace('{w}', '1200').replace('{h}', '1200').replace('{f}', 'jpg');
   }
 
   private dedupeTracks(tracks: AppleMusicTrackItem[]): AppleMusicTrackItem[] {

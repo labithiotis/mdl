@@ -17,12 +17,7 @@ export function CarbonAd() {
   const headline = `${ad.company}${separator}${tagline}`;
 
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="magenta"
-      paddingX={1}
-    >
+    <Box flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={1}>
       {headline ? (
         <Transform transform={trimStart}>
           <Text bold color="magentaBright">
@@ -41,12 +36,7 @@ export function CarbonAd() {
           <Text color="blueBright"> →</Text>
         </Link>
       ) : null}
-      <Box
-        width="100%"
-        justifyContent="flex-end"
-        marginBottom={-1}
-        paddingRight={1}
-      >
+      <Box width="100%" justifyContent="flex-end" marginBottom={-1} paddingRight={1}>
         <Text wrap="truncate">ads via Carbon</Text>
       </Box>
     </Box>
@@ -56,9 +46,6 @@ export function CarbonAd() {
 /** Trim leading whitespace left by wrap-ansi (trim: false) on continuation lines.
  *  ANSI-aware: skips escape sequences so bold/color codes don't block the trim. */
 const ansiSgrPrefixPattern = '\\u001B\\[[0-9;]*m';
-const leadingAnsiWhitespacePattern = new RegExp(
-  `^((?:${ansiSgrPrefixPattern})*)\\s+`
-);
+const leadingAnsiWhitespacePattern = new RegExp(`^((?:${ansiSgrPrefixPattern})*)\\s+`);
 
-const trimStart = (line: string) =>
-  line.replace(leadingAnsiWhitespacePattern, '$1');
+const trimStart = (line: string) => line.replace(leadingAnsiWhitespacePattern, '$1');

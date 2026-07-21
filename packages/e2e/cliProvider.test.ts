@@ -17,11 +17,9 @@ type Provider =
 
 const ALBUM_EXAMPLES: Record<Provider, string> = {
   spotify: 'https://open.spotify.com/album/6eUW0wxWtzkFdaEFsTJto6',
-  'apple-music':
-    'https://music.apple.com/us/album/the-boys-of-dungeon-lane/1887402919',
+  'apple-music': 'https://music.apple.com/us/album/the-boys-of-dungeon-lane/1887402919',
   'amazon-music': 'https://music.amazon.com/albums/B0FQCR86CK',
-  soundcloud:
-    'https://soundcloud.com/soundcloud-amped/sets/the-dive-new-rock-now',
+  soundcloud: 'https://soundcloud.com/soundcloud-amped/sets/the-dive-new-rock-now',
   bandcamp: 'https://marcellaandherlovers.bandcamp.com/album/live-from-memphis',
   deezer: 'https://www.deezer.com/us/album/302127',
   qobuz: 'https://www.qobuz.com/us-en/album/discovery-daft-punk/0724384960650',
@@ -31,17 +29,14 @@ const ALBUM_EXAMPLES: Record<Provider, string> = {
 
 const TRACK_EXAMPLES: Record<Provider, string> = {
   spotify: 'https://open.spotify.com/track/4PTG3Z6ehGkBFwjybzWkR8',
-  'apple-music':
-    'https://music.apple.com/us/album/days-we-left-behind/1887402919?i=1887403088',
-  'amazon-music':
-    'https://music.amazon.com/albums/B0FQCR86CK?do=play&trackAsin=B0FQDGK37H',
+  'apple-music': 'https://music.apple.com/us/album/days-we-left-behind/1887402919?i=1887403088',
+  'amazon-music': 'https://music.amazon.com/albums/B0FQCR86CK?do=play&trackAsin=B0FQDGK37H',
   soundcloud: 'https://soundcloud.com/lovebunii/virgilio',
   bandcamp: 'https://munterfel.bandcamp.com/track/dancinginjuly',
   deezer: 'https://www.deezer.com/track/3703817902',
   qobuz: 'https://open.qobuz.com/track/13176083',
   tidal: 'https://tidal.com/browse/track/495402660',
-  'youtube-music':
-    'https://music.youtube.com/watch?v=hLQl3WQQoQ0&list=RDCLAK5uy_nHSqCJjDrW9HBhCNdF6tWPdnOMngOv0wA',
+  'youtube-music': 'https://music.youtube.com/watch?v=hLQl3WQQoQ0&list=RDCLAK5uy_nHSqCJjDrW9HBhCNdF6tWPdnOMngOv0wA',
 };
 
 describe('cli-provider-smoke', () => {
@@ -58,11 +53,7 @@ describe('cli-provider-smoke', () => {
   }
 });
 
-async function runProviderSmokeTest(
-  provider: string,
-  url: string,
-  exampleKind: 'album' | 'track'
-): Promise<void> {
+async function runProviderSmokeTest(provider: string, url: string, exampleKind: 'album' | 'track'): Promise<void> {
   const dir = await mkdtemp(path.join(os.tmpdir(), `mdl-e2e-${provider}-`));
 
   try {
@@ -88,9 +79,7 @@ async function runProviderSmokeTest(
   }
 }
 
-async function findFirstDownloadedFile(
-  directory: string
-): Promise<string | null> {
+async function findFirstDownloadedFile(directory: string): Promise<string | null> {
   const entries = await readdir(directory, { withFileTypes: true });
 
   for (const entry of entries) {

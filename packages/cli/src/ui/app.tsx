@@ -1,11 +1,8 @@
-import { Box, useApp } from 'ink';
-import { useEffect, useReducer, useRef } from 'react';
+import { Box, Text, useApp } from 'ink';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import type { AudioFormat, AudioQuality } from '../lib/args';
-import {
-  formatProviderName,
-  providers,
-  validateProviderUrl,
-} from '../lib/providers/Providers';
+import { setPoTokenWarningHandler } from '../lib/poToken';
+import { formatProviderName, providers, validateProviderUrl } from '../lib/providers/Providers';
 import { syncPlaylist } from '../lib/sync';
 import type { PlaylistMetadata, SyncManifest } from '../lib/types';
 import { Hero } from './components/Hero';
@@ -38,27 +35,20 @@ export function App({
   trackCount,
 }: AppProps) {
   const { exit } = useApp();
-  const loadingPhaseRef = useRef<Extract<
-    Phase,
-    { kind: 'loading-playlist' }
-  > | null>(null);
-  const syncingPhaseRef = useRef<Extract<Phase, { kind: 'syncing' }> | null>(
-    null
-  );
-  const [state, dispatch] = useReducer(
-    reducer,
-    createInitialState({ initialUrl, manifest })
-  );
-  const loadingRequestKey =
-    state.phase.kind === 'loading-playlist' ? state.phase.url : null;
-  const syncRequestKey =
-    state.phase.kind === 'syncing'
-      ? `${state.phase.playlist.id}:${state.phase.url}`
-      : null;
+  const [poTokenWarning, setPoTokenWarning] = useState<string>();
+  const loadingPhaseRef = useRef<Extract<Phase, { kind: 'loading-playlist' }> | null>(null);
+  const syncingPhaseRef = useRef<Extract<Phase, { kind: 'syncing' }> | null>(null);
+  const [state, dispatch] = useReducer(reducer, createInitialState({ initialUrl, manifest }));
+  const loadingRequestKey = state.phase.kind === 'loading-playlist' ? state.phase.url : null;
+  const syncRequestKey = state.phase.kind === 'syncing' ? `${state.phase.playlist.id}:${state.phase.url}` : null;
 
-  loadingPhaseRef.current =
-    state.phase.kind === 'loading-playlist' ? state.phase : null;
+  loadingPhaseRef.current = state.phase.kind === 'loading-playlist' ? state.phase : null;
   syncingPhaseRef.current = state.phase.kind === 'syncing' ? state.phase : null;
+
+  useEffect(() => {
+    setPoTokenWarningHandler(setPoTokenWarning);
+    return () => setPoTokenWarningHandler(null);
+  }, []);
 
   useEffect(() => {
     if (!loadingRequestKey) return;
@@ -84,8 +74,7 @@ export function App({
         } catch (error) {
           if (!isActive) return;
 
-          const message =
-            error instanceof Error ? error.message : 'Unknown error';
+          const message = error instanceof Error ? error.message : 'Unknown error';
 
           if (phase.canRetryInput) {
             dispatch({ type: 'input-error', message });
@@ -105,10 +94,7 @@ export function App({
           message: `Fetching ${formatProviderName(validated.provider)} collection metadata`,
         });
         const playlist = applyTrackCountLimit(
-          await providers[validated.provider].fetch(
-            validated.normalizedUrl,
-            {}
-          ),
+          await providers[validated.provider].fetch(validated.normalizedUrl, {}),
           trackCount
         );
         if (!isActive) return;
@@ -123,8 +109,7 @@ export function App({
       } catch (error) {
         if (!isActive) return;
 
-        const message =
-          error instanceof Error ? error.message : 'Unknown error';
+        const message = error instanceof Error ? error.message : 'Unknown error';
         dispatch({ type: 'error', message });
       }
     })();
@@ -169,8 +154,7 @@ export function App({
       } catch (error) {
         if (!isActive || controller.signal.aborted) return;
 
-        const message =
-          error instanceof Error ? error.message : 'Unknown error';
+        const message = error instanceof Error ? error.message : 'Unknown error';
         dispatch({ type: 'error', message });
       }
     })();
@@ -179,13 +163,7 @@ export function App({
       isActive = false;
       controller.abort();
     };
-  }, [
-    audioFormat,
-    audioQuality,
-    downloadParallelism,
-    outputDir,
-    syncRequestKey,
-  ]);
+  }, [audioFormat, audioQuality, downloadParallelism, outputDir, syncRequestKey]);
 
   useEffect(() => {
     if (state.phase.kind !== 'done' && state.phase.kind !== 'error') {
@@ -203,6 +181,12 @@ export function App({
   return (
     <Box flexDirection="column" paddingX={1}>
       <Hero />
+
+      {poTokenWarning ? (
+        <Box marginBottom={1}>
+          <Text color="yellowBright">Warning: {poTokenWarning}</Text>
+        </Box>
+      ) : null}
 
       {state.phase.kind === 'collecting-input' ? (
         <InputScreen
@@ -257,17 +241,12 @@ export function App({
         />
       ) : null}
 
-      {state.phase.kind === 'error' ? (
-        <ErrorScreen message={state.phase.message} />
-      ) : null}
+      {state.phase.kind === 'error' ? <ErrorScreen message={state.phase.message} /> : null}
     </Box>
   );
 }
 
-function applyTrackCountLimit(
-  playlist: PlaylistMetadata,
-  trackCount?: number
-): PlaylistMetadata {
+function applyTrackCountLimit(playlist: PlaylistMetadata, trackCount?: number): PlaylistMetadata {
   if (!trackCount || playlist.tracks.length <= trackCount) {
     return playlist;
   }

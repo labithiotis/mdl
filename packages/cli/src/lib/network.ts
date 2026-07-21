@@ -1,4 +1,6 @@
 import { ProxyAgent, fetch as undiciFetch } from 'undici';
+import type { SessionOptions } from 'youtubei.js';
+import type { YouTubePoToken } from './poToken';
 
 export type NetworkOptions = {
   proxy?: string;
@@ -25,28 +27,30 @@ export function configureNetwork(options: NetworkOptions): void {
   }
 
   proxyAgent = new ProxyAgent(options.proxy);
-  console.log('=======> Using proxy', options.proxy);
   globalThis.fetch = createProxyFetch(proxyAgent);
 }
 
-export function getYouTubeSessionOptions(): {
-  cookie?: string;
-  fetch: typeof fetch;
-  po_token?: string;
-  user_agent?: string;
-} {
+export function getYouTubeSessionOptions(poToken?: YouTubePoToken): Partial<SessionOptions> {
   return {
     cookie: currentNetworkOptions.ytCookie,
-    fetch: globalThis.fetch.bind(globalThis),
     user_agent: currentNetworkOptions.ytUserAgent,
+    visitor_data: poToken?.visitorData,
+    po_token: poToken?.poToken,
+    fetch: globalThis.fetch.bind(globalThis),
   };
 }
 
+export function getYouTubeSessionCacheKey(poToken?: YouTubePoToken): string {
+  return JSON.stringify({
+    cookie: currentNetworkOptions.ytCookie,
+    userAgent: currentNetworkOptions.ytUserAgent,
+    poToken: poToken?.poToken,
+    visitorData: poToken?.visitorData,
+  });
+}
+
 function createProxyFetch(agent: ProxyAgent): typeof fetch {
-  return (async (
-    input: Parameters<typeof fetch>[0],
-    init?: Parameters<typeof fetch>[1]
-  ) =>
+  return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
     undiciFetch(
       input as never,
       {
