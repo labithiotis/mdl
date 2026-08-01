@@ -57,3 +57,14 @@ export const syncManifestSchema = Schema.Struct({
   generatedAt: Schema.String,
   tracks: Schema.Array(manifestTrackSchema),
 });
+
+export const spotdlSongSchema = Schema.Struct({
+  list_name: Schema.NullOr(Schema.String),
+  list_url: Schema.NullOr(Schema.String),
+});
+
+export const spotdlSaveFileSchema = Schema.Struct({
+  type: Schema.Literal('sync'),
+  query: Schema.Array(Schema.String),
+  songs: Schema.Array(spotdlSongSchema),
+});
