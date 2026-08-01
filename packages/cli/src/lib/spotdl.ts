@@ -1,74 +1,89 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { Either } from 'effect';
+import { detectProvider } from './providers/Providers';
+import { spotdlSaveFileSchema } from './schemas';
 import type { SyncManifest } from './types';
-import { getFirstNonEmptyString } from './utils';
+import { decodeUnknownEither, getFirstNonEmptyString } from './utils';
 
-export const SPOTDL_FILE_EXTENSION = '.spotdl';
-
-type SpotdlSong = {
-  album_id?: string;
-  list_name?: string;
-  list_url?: string;
-  song_id?: string;
-  url?: string;
-};
-
-type SpotdlSaveFile = {
-  query?: string[];
-  songs?: SpotdlSong[];
-};
+const SPOTDL_FILE_EXTENSION = '.spotdl';
 
 export async function loadSpotdlManifest(directory: string): Promise<SyncManifest | null> {
-  const spotdlPath = await findSpotdlFile(directory);
-  if (!spotdlPath) {
-    return null;
+  const spotdlPaths = await findSpotdlFiles(directory);
+
+  for (const spotdlPath of spotdlPaths) {
+    try {
+      const content = await readFile(spotdlPath, 'utf8');
+      const manifest = parseSpotdlSaveFile(JSON.parse(content));
+      if (manifest) {
+        return manifest;
+      }
+    } catch {}
   }
 
-  try {
-    const content = await readFile(spotdlPath, 'utf8');
-    return parseSpotdlSaveFile(JSON.parse(content));
-  } catch {
-    return null;
-  }
+  return null;
 }
 
-async function findSpotdlFile(directory: string): Promise<string | null> {
+async function findSpotdlFiles(directory: string): Promise<string[]> {
   let entries: string[];
   try {
     entries = await readdir(directory);
   } catch {
-    return null;
+    return [];
   }
 
-  const fileName = entries.find((entry) => entry.toLowerCase().endsWith(SPOTDL_FILE_EXTENSION));
-  return fileName ? path.join(directory, fileName) : null;
+  return entries
+    .filter((entry) => entry.toLowerCase().endsWith(SPOTDL_FILE_EXTENSION))
+    .sort()
+    .map((fileName) => path.join(directory, fileName));
 }
 
 function parseSpotdlSaveFile(value: unknown): SyncManifest | null {
-  const saveFile = value as Partial<SpotdlSaveFile>;
-  const firstSong = saveFile.songs?.[0];
-  const playlistUrl = getFirstNonEmptyString(saveFile.query?.[0], firstSong?.list_url, firstSong?.url);
-
-  if (!playlistUrl) {
+  const saveFileResult = decodeUnknownEither(spotdlSaveFileSchema, value);
+  if (Either.isLeft(saveFileResult)) {
     return null;
   }
 
-  const playlistId = getFirstNonEmptyString(extractSpotifyId(playlistUrl), firstSong?.album_id, firstSong?.song_id);
-  if (!playlistId) {
+  const saveFile = saveFileResult.right;
+  const firstSong = saveFile.songs?.[0];
+  const collection = [firstSong?.list_url, saveFile.query[0]]
+    .map(parseSpotifyCollection)
+    .find((candidate) => candidate !== null);
+
+  if (!collection) {
     return null;
   }
 
   return {
     version: 1,
     provider: 'spotify',
-    playlistId,
+    playlistId: collection.id,
     playlistTitle: getFirstNonEmptyString(firstSong?.list_name) ?? 'Spotify playlist',
-    playlistUrl,
+    playlistUrl: collection.url,
     generatedAt: new Date().toISOString(),
     tracks: [],
   };
 }
 
-function extractSpotifyId(url: string): string | undefined {
-  return url.match(/\/(?:playlist|album|track)\/([A-Za-z0-9]+)/)?.[1];
+function parseSpotifyCollection(value: string | null | undefined): { id: string; url: string } | null {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const uriMatch = trimmedValue.match(/^spotify:(playlist|album|track):([A-Za-z0-9]+)$/i);
+  if (uriMatch) {
+    return {
+      id: uriMatch[2],
+      url: `https://open.spotify.com/${uriMatch[1].toLowerCase()}/${uriMatch[2]}`,
+    };
+  }
+
+  if (detectProvider(trimmedValue) !== 'spotify') {
+    return null;
+  }
+
+  const url = new URL(trimmedValue);
+  const pathMatch = url.pathname.match(/\/(playlist|album|track)\/([A-Za-z0-9]+)\/?$/i);
+  return pathMatch ? { id: pathMatch[2], url: trimmedValue } : null;
 }
