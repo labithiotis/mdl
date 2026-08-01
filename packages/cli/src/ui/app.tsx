@@ -205,7 +205,7 @@ export function App({
       {state.phase.kind === 'confirming-resync' ? (
         <ReSyncScreen
           title={`Resync playlist ${state.phase.manifest.playlistTitle}?`}
-          description="We've detected an existing playlist manifest in this directory. Press Enter to resync now, or N to continue with the new playlist."
+          description="We've detected an existing playlist in this directory. Press Enter to resync now, or N to continue with the new playlist."
           onSubmit={(value) => {
             dispatch({ type: 'resync-answer', value });
           }}
