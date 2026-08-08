@@ -39,7 +39,7 @@ export function DoneScreen(props: DoneScreenProps) {
 
       <Panel title="Tracks" borderColor="green" titleColor="green">
         {props.workerSlots.map((slot) => (
-          <WorkerRow key={slot.trackId} slot={slot} />
+          <WorkerRow key={slot.trackIndex} slot={slot} />
         ))}
       </Panel>
 

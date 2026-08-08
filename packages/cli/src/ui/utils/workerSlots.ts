@@ -34,7 +34,10 @@ export function updateWorkerSlots(
     return slots;
   }
 
-  const slotIndex = slots.findIndex((slot) => slot.trackId === trackId);
+  const slotIndex =
+    progress.trackIndex === undefined
+      ? slots.findIndex((slot) => slot.trackId === trackId)
+      : slots.findIndex((slot) => slot.trackIndex === progress.trackIndex);
   if (slotIndex < 0) {
     return slots;
   }
