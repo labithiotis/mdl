@@ -16,7 +16,7 @@ describe('ListPanel', () => {
       <ListPanel
         items={createSlots(18)}
         minRows={4}
-        renderItem={(slot) => <WorkerRow key={slot.trackId} slot={slot} />}
+        renderItem={(slot) => <WorkerRow key={slot.trackIndex} slot={slot} />}
         title="Tracks"
         viewportHeight={4}
       />

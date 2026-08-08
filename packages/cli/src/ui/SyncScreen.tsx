@@ -43,7 +43,7 @@ export function SyncScreen(props: SyncScreenProps) {
         borderColor="magenta"
         minRows={20}
         items={visibleSlots}
-        renderItem={(slot) => <WorkerRow key={slot.trackId} slot={slot} />}
+        renderItem={(slot) => <WorkerRow key={slot.trackIndex} slot={slot} />}
       />
     </Box>
   );
