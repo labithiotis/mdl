@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Either } from 'effect';
 import { detectProvider } from './providers/Providers';
-import { spotdlSaveFileSchema } from './schemas';
+import { spotdlMetadataFileSchema, spotdlSaveFileSchema } from './schemas';
 import type { SyncManifest } from './types';
 import { decodeUnknownEither, getFirstNonEmptyString } from './utils';
 
@@ -40,13 +40,20 @@ async function findSpotdlFiles(directory: string): Promise<string[]> {
 
 function parseSpotdlSaveFile(value: unknown): SyncManifest | null {
   const saveFileResult = decodeUnknownEither(spotdlSaveFileSchema, value);
-  if (Either.isLeft(saveFileResult)) {
-    return null;
+  if (Either.isRight(saveFileResult)) {
+    return parseSpotdlCollection(saveFileResult.right.songs, saveFileResult.right.query);
   }
 
-  const saveFile = saveFileResult.right;
-  const firstSong = saveFile.songs?.[0];
-  const collection = [firstSong?.list_url, saveFile.query[0]]
+  const metadataFileResult = decodeUnknownEither(spotdlMetadataFileSchema, value);
+  return Either.isRight(metadataFileResult) ? parseSpotdlCollection(metadataFileResult.right, []) : null;
+}
+
+function parseSpotdlCollection(
+  songs: ReadonlyArray<{ list_name: string | null; list_url: string | null }>,
+  query: ReadonlyArray<string>
+): SyncManifest | null {
+  const firstSong = songs[0];
+  const collection = [firstSong?.list_url, query[0]]
     .map(parseSpotifyCollection)
     .find((candidate) => candidate !== null);
 
