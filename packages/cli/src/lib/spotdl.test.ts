@@ -51,6 +51,36 @@ describe('spotdl', () => {
     );
   });
 
+  test('loadSpotdlManifest extracts album metadata from a spotDL save file', async () => {
+    const directory = await createTemporaryDirectory();
+    await writeFile(
+      path.join(directory, 'meta.spotdl'),
+      JSON.stringify([
+        {
+          name: 'Inertia',
+          artists: ['squeeda', 'tonbo', 'Lofi Girl'],
+          album_name: 'Best-of lofi hip-hop 2023',
+          song_id: '6wRHaOcokW7CxVDtIWAtwi',
+          url: 'https://open.spotify.com/track/6wRHaOcokW7CxVDtIWAtwi',
+          list_name: 'Best-of lofi hip-hop 2023',
+          list_url: 'https://open.spotify.com/album/5wJIyaro488CBphiDI8bu5?si=QyLo6h_MSfyuxp73f9I8dw',
+        },
+      ])
+    );
+
+    const manifest = await loadSpotdlManifest(directory);
+
+    expect(manifest).toEqual(
+      expect.objectContaining({
+        provider: 'spotify',
+        playlistId: '5wJIyaro488CBphiDI8bu5',
+        playlistTitle: 'Best-of lofi hip-hop 2023',
+        playlistUrl: 'https://open.spotify.com/album/5wJIyaro488CBphiDI8bu5?si=QyLo6h_MSfyuxp73f9I8dw',
+        tracks: [],
+      })
+    );
+  });
+
   test('loadSpotdlManifest falls back to the first song list_url when query is empty', async () => {
     const directory = await createTemporaryDirectory();
     await writeFile(

@@ -68,3 +68,5 @@ export const spotdlSaveFileSchema = Schema.Struct({
   query: Schema.Array(Schema.String),
   songs: Schema.Array(spotdlSongSchema),
 });
+
+export const spotdlMetadataFileSchema = Schema.Array(spotdlSongSchema);

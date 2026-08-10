@@ -24,7 +24,7 @@ Paste a URL, and the `mdl` resolves music metadata, searches YouTube for matches
 - All providers work without API keys, we query via public urls
 - Downloads are grouped into a music name directory
 - A `.mdl.json` manifest is written next to the files for resyncs
-- If no `.mdl.json` is found, an existing `.spotdl` sync file in the directory is used to detect the playlist URL for a resync
+- If no `.mdl.json` is found, an existing spotDL `.spotdl` sync or save file is used to detect the collection URL for a resync
 - Metadata is resolved directly from the music URL
 - Audio is sourced from YouTube
 
