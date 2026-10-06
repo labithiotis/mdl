@@ -1,6 +1,17 @@
-pre-commit:
+post-merge:
+  follow: true
+  files: git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD
   commands:
-    lint:
-      run: bun run lint
-    typecheck:
-      run: bun run typecheck
+    install:
+      glob: ['bun.lock', '*package.json']
+      run: bun install
+
+pre-commit:
+  piped: true
+  jobs:
+    - name: format
+      glob: '*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc,css}'
+      run: bunx --no-install biome check --write --linter-enabled=false --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+    - name: check
+      run: bun checks

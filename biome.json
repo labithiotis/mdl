@@ -13,7 +13,9 @@
       "!**/.wrangler",
       "!**/.output",
       "!**/dist",
-      "!**/build"
+      "!**/build",
+      "!!.delta",
+      "!!.worktrees"
     ]
   },
   "formatter": {
