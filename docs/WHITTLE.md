@@ -39,8 +39,10 @@ Keep replies compact. Preserve full meaning. Cut fluff and AI tells. Use plain E
 ## Plain speech
 
 - Say what something does, not how it feels. Prefer concrete instructions, mechanisms, facts, examples, or numbers.
-- Split dense sentences. Keep one main idea per sentence when complexity hurts readability.
+- Split dense sentences and unpack unclear noun stacks. Keep one main idea per sentence when complexity hurts
+  readability.
 - Prefer active voice when the actor matters.
+- Use verbs, not action nouns: `analyze`, not `perform an analysis of`.
 - Cut weak adverbs. Use a stronger verb or measured fact.
 - Prefer `use` over `utilize` or `leverage`, `help` over `facilitate`, `many` over `numerous`, and `if` over
   `in the event that`.
@@ -48,7 +50,7 @@ Keep replies compact. Preserve full meaning. Cut fluff and AI tells. Use plain E
 
 ## Style
 
-- No em dashes. Do not replace them with en dashes, hyphen-dashes, or unnecessary parentheses.
+- No em dashes. Do not replace them with semicolons, en dashes, hyphen-dashes, or unnecessary parentheses.
 - Use colons for real lists or examples, not habitual sentence joins.
 - Do not overuse bold or inline-header lists.
 - Use sentence-case headings, straight quotes, and no decorative emojis.
