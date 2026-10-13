@@ -10,7 +10,7 @@ New dependencies use the latest compatible release; pin exact versions.
 Use Conventional Commits for commit messages. Keep the subject under ~70 chars; add a body only when the why matters.
 Use a 120 print width for code and documentation, unless the existing formatter configuration requires otherwise.
 Use MCPProxy for MCP connections when it is available. Use T3 Code (`t3-code`) MCP tools directly, bypassing MCPProxy.
-Use Git worktrees for isolated work; never clone a repo unless the user explicitly directs you to.
+When asked to use a git worktree, create it from the latest main under the project's root dir `.worktrees/<name>`.
 Reuse dev servers; stop only those you started this session by recorded PID; never `pkill`/`killall` or name/port kills.
 
 ## Routing
